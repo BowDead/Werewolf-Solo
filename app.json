@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Wilkołaki Solo",
+    "slug": "werewolf-solo",
+    "version": "1.0.0",
+    "icon": "./assets/icon.svg",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#1a1a2e",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "icon": "./assets/icon.svg"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1a1a2e",
+        "foregroundImage": "./assets/icon.svg"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

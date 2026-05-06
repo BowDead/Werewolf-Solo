@@ -1,0 +1,44 @@
+# Wilkołaki Solo
+
+## Informacje o projekcie
+**Przedmiot:** Zaawansowane Programowanie Systemów Mobilnych  
+**Etap:** I – Zatwierdzenie tematu projektu  
+
+**Autor:**  
+Bartłomiej Gwóźdź – 37685  
+
+## Opis projektu
+Projekt z przedmiotu **Zaawansowane Programowanie Systemów Mobilnych**, pod tytułem **„Wilkołaki Solo”**, zakłada stworzenie krótkiej, powtarzalnej oraz nieskomplikowanej mobilnej gry jednoosobowej opartej na mechanice **dedukcji socjalnej**.
+
+Gracz wciela się w obserwatora analizującego wypowiedzi postaci niezależnych (NPC). Na podstawie ich dialogów oraz wykrywania niespójności w wypowiedziach gracz musi ustalić, które postacie są wilkołakami.
+
+## Mechanika gry
+Rozgrywka polega na:
+- analizowaniu wypowiedzi postaci niezależnych,
+- wykrywaniu niespójności w ich wypowiedziach,
+- podejmowaniu decyzji, które postacie są wilkołakami.
+
+Postacie w grze mogą:
+- mówić prawdę,
+- kłamać,
+- wprowadzać gracza w błąd poprzez sprzeczne informacje.
+
+## Cel gry
+Celem gracza jest **poprawne wydedukowanie wszystkich postaci będących wilkołakami**, popełniając przy tym **jak najmniejszą liczbę błędów**.
+
+## Założenia projektowe
+- gra jednoosobowa,
+- krótkie, powtarzalne sesje rozgrywki,
+- prosta i przejrzysta mechanika,
+- nacisk na logikę i dedukcję gracza,
+- mobilna platforma docelowa.
+
+## Możliwe rozszerzenia
+W przyszłości projekt może zostać rozszerzony o:
+- większą liczbę postaci i ról,
+- różne poziomy trudności,
+- system punktacji,
+- losowe generowanie scenariuszy.
+
+## Status projektu
+Etap I – zatwierdzenie tematu projektu.
