@@ -4,48 +4,55 @@ import { shuffle, doesLie, getGridNeighbours } from "./utils";
 
 export { shuffle, doesLie, getGridNeighbours };
 
-const neighbourFraction = 0.4;
-
-function buildRolePool(characterCount) {
-  const targetSize = Math.max(1, characterCount);
-
-  // Determine which roles are active/implemented
+function buildRolePoolByState(states) {
   const activeRoles = Object.keys(ROLES).filter((r) => ROLES[r].active);
-
-  const pool = [];
-
-  // Prefer one confessor and one watchman if available
-  if (ROLES.confessor && ROLES.confessor.active) pool.push("confessor");
-  if (ROLES.watchman && ROLES.watchman.active) pool.push("watchman");
-
-  // Fill remaining slots preferring neighbour -> witness -> doctor -> president -> any active role
-  const preferred = ["neighbour", "witness", "doctor", "president"];
-
-  while (pool.length < targetSize) {
-    // build candidate list based on preference and availability
-    const candidates = [];
-    for (const p of preferred) {
-      if (ROLES[p] && ROLES[p].active) {
-        candidates.push(p);
-      }
-    }
-
-    // If no preferred roles available, fall back to any active role
-    if (candidates.length === 0) {
-      if (activeRoles.length === 0) {
-        // As a last resort, use confessor (shouldn't happen)
-        candidates.push("confessor");
-      } else {
-        candidates.push(...activeRoles);
-      }
-    }
-
-    // pick a random candidate and add to pool
-    const pick = shuffle(candidates)[0];
-    pool.push(pick);
+  if (activeRoles.length === 0) {
+    return Array(states.length).fill("confessor");
   }
 
-  return shuffle(pool).slice(0, targetSize);
+  const roles = Array(states.length).fill(activeRoles[0]);
+
+  const villagerLikeIndexes = [];
+  const werewolfIndexes = [];
+
+  states.forEach((state, index) => {
+    if (state === "werewolf") {
+      werewolfIndexes.push(index);
+      return;
+    }
+    villagerLikeIndexes.push(index);
+  });
+
+  // Villagers + corrupted villagers: distribute random roles without repeats first.
+  let cycle = shuffle([...activeRoles]);
+  villagerLikeIndexes.forEach((index, i) => {
+    if (i > 0 && i % activeRoles.length === 0) {
+      cycle = shuffle([...activeRoles]);
+    }
+    roles[index] = cycle[i % activeRoles.length];
+  });
+
+  // Werewolves: random roles with a slight chance to repeat a role already seen.
+  const repeatChance = 0.3;
+  const villagerLikeRoles = villagerLikeIndexes.map((index) => roles[index]);
+  const werewolfAssignedRoles = [];
+  shuffle([...werewolfIndexes]).forEach((index) => {
+    let chosenRole;
+
+    if (Math.random() < repeatChance) {
+      const repeatPool = [...werewolfAssignedRoles, ...villagerLikeRoles];
+      chosenRole = repeatPool.length
+        ? shuffle(repeatPool)[0]
+        : shuffle([...activeRoles])[0];
+    } else {
+      chosenRole = shuffle([...activeRoles])[0];
+    }
+
+    roles[index] = chosenRole;
+    werewolfAssignedRoles.push(chosenRole);
+  });
+
+  return roles;
 }
 
 export function createGame(levelKey) {
@@ -65,7 +72,7 @@ export function createGame(levelKey) {
   ];
 
   const states = shuffle(statePool);
-  const roles = buildRolePool(config.characterCount);
+  const roles = buildRolePoolByState(states);
 
   const characters = selectedProfessions.map((profession, index) => ({
     id: index,
