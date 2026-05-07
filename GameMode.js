@@ -12,19 +12,24 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { DIFFICULTIES, DIFFICULTY_ORDER } from "./constants";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { DIFFICULTY_ORDER } from "./constants";
 import { createGame } from "./gameLogic";
 import { appTheme, sharedStyleObjects } from "./appStyles";
 import { menuStyles } from "./menuStyles";
 import revealedCardStyles from "./revealedCardStyles";
+import {
+  buildRoundSummary,
+  finalizeScoreForRound,
+  loadGameProgress,
+  saveGameProgress,
+} from "./gameProgress";
 
 // ─────────────────────────────────────────────────────────────
 //  DEVELOPER MODE
 //  Set to true to show each character's role and state on their
 //  card during gameplay. Flip back to false before shipping.
 // ─────────────────────────────────────────────────────────────
-const DEV_MODE = false;
+const DEV_MODE = true;
 
 // Labels shown in the debug badge
 const DEV_STATE_LABEL = {
@@ -44,40 +49,26 @@ export default function GameMode({ onExit }) {
   const [levelIndex, setLevelIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [hasSave, setHasSave] = useState(false);
+  const [lastSummary, setLastSummary] = useState(null);
   const [showResultOverlay, setShowResultOverlay] = useState(true);
-
-  const SAVE_KEY = "WEREWOLF_SAVE";
 
   useEffect(() => {
     loadProgress().then((data) => {
       if (data) {
-        setLevelIndex(data.levelIndex);
-        setScore(data.score);
+        setLevelIndex(data.levelIndex ?? 0);
+        setScore(data.score ?? 0);
+        setLastSummary(data.summary ?? null);
         setHasSave(true);
       }
     });
   }, []);
 
-  const saveProgress = async (data) => {
-    try {
-      await AsyncStorage.setItem(SAVE_KEY, JSON.stringify(data));
-      setHasSave(true);
-    } catch {}
-  };
-
   const loadProgress = async () => {
     try {
-      const raw = await AsyncStorage.getItem(SAVE_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw);
+      return await loadGameProgress();
     } catch {
       return null;
     }
-  };
-
-  const clearProgress = async () => {
-    await AsyncStorage.removeItem(SAVE_KEY);
-    setHasSave(false);
   };
 
   // All characters that count as hidden threats
@@ -110,34 +101,59 @@ export default function GameMode({ onExit }) {
     setPhase("playing");
     setShowResultOverlay(true);
 
-    saveProgress({
+    saveGameProgress({
       levelIndex: index,
       score: newScore,
+      summary: lastSummary,
     });
+    setHasSave(true);
   };
 
   const goToResult = (nextGameState, resultType) => {
-    let newLevelIndex = levelIndex;
-    let newScore = score;
-
-    if (resultType === "win") {
-      newScore += 1;
-
-      if (levelIndex < DIFFICULTY_ORDER.length - 1) {
-        newLevelIndex += 1;
-      }
-    }
+    const elapsedSeconds = Math.max(
+      1,
+      Math.round((Date.now() - (nextGameState.startedAt ?? Date.now())) / 1000),
+    );
+    const scoreDetails = finalizeScoreForRound({
+      currentScore: score,
+      levelKey: nextGameState.levelKey,
+      elapsedSeconds,
+      mistakes: nextGameState.mistakes,
+      maxMistakes: nextGameState.config.maxMistakes,
+      resultType,
+    });
+    const newLevelIndex =
+      resultType === "win"
+        ? Math.min(levelIndex + 1, DIFFICULTY_ORDER.length - 1)
+        : 0;
+    const newScore = scoreDetails.nextScore;
+    const summary = buildRoundSummary({
+      levelKey: nextGameState.levelKey,
+      resultType,
+      elapsedSeconds,
+      currentScore: score,
+      nextScore: newScore,
+      scoreChange: scoreDetails.scoreChange,
+      difficultyPoints: scoreDetails.difficultyPoints,
+      timeBonus: scoreDetails.timeBonus,
+      cleanPlayBonus: scoreDetails.cleanPlayBonus,
+      mistakesAvoided: scoreDetails.mistakesAvoided,
+      roundPoints: scoreDetails.roundPoints,
+      penalty: scoreDetails.penalty,
+    });
 
     setLevelIndex(newLevelIndex);
     setScore(newScore);
+    setLastSummary(summary);
     setShowResultOverlay(true);
 
-    saveProgress({
+    saveGameProgress({
       levelIndex: newLevelIndex,
       score: newScore,
+      summary,
     });
 
-    setGame({ ...nextGameState, result: resultType });
+    setGame({ ...nextGameState, result: resultType, summary });
     setPhase("result");
   };
 
@@ -423,6 +439,7 @@ export default function GameMode({ onExit }) {
 
   const renderResultOverlay = () => {
     const isWin = game.result === "win";
+    const summary = game.summary ?? lastSummary;
 
     if (!showResultOverlay) {
       return (
@@ -456,6 +473,33 @@ export default function GameMode({ onExit }) {
               ? "You found all hidden enemies."
               : "The mistake limit has been reached."}
           </Text>
+          {summary && (
+            <View style={styles.scoreSummaryBox}>
+              <Text style={styles.scoreSummaryTitle}>Summary</Text>
+              <Text style={styles.scoreSummaryLine}>
+                Difficulty: +{summary.difficultyPoints}
+              </Text>
+              <Text style={styles.scoreSummaryLine}>
+                Time bonus: +{summary.timeBonus} ({summary.elapsedSeconds}s)
+              </Text>
+              <Text style={styles.scoreSummaryLine}>
+                Clean play: +{summary.cleanPlayBonus} ({summary.mistakesAvoided}{" "}
+                mistakes avoided)
+              </Text>
+              {summary.penalty > 0 && (
+                <Text style={styles.scoreSummaryLine}>
+                  Loss penalty: -{summary.penalty}
+                </Text>
+              )}
+              <Text style={styles.scoreSummaryLine}>
+                Round points: {summary.scoreChange >= 0 ? "+" : ""}
+                {summary.scoreChange}
+              </Text>
+              <Text style={styles.scoreSummaryTotal}>
+                Total score: {summary.nextScore}
+              </Text>
+            </View>
+          )}
           <Text style={styles.resultOverlayText}>Hidden enemies:</Text>
           {threats.map((t) => (
             <Text key={t.id} style={styles.resultOverlayThreat}>
@@ -472,7 +516,9 @@ export default function GameMode({ onExit }) {
             style={menuStyles.menuButton}
             onPress={() => startGameAtIndex(levelIndex)}
           >
-            <Text style={menuStyles.menuButtonTitle}>Play again</Text>
+            <Text style={menuStyles.menuButtonTitle}>
+              {isWin ? "Next round" : "Restart round"}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -518,8 +564,7 @@ export default function GameMode({ onExit }) {
           <TouchableOpacity
             style={menuStyles.menuButton}
             onPress={() => {
-              clearProgress();
-              startGameAtIndex(0, 0);
+              startGameAtIndex(0, score);
             }}
           >
             <Text style={menuStyles.menuButtonTitle}>New Game</Text>
@@ -799,6 +844,38 @@ const styles = StyleSheet.create({
     color: appTheme.colors.textSub,
     fontSize: 16,
     textAlign: "center",
+  },
+  scoreSummaryBox: {
+    width: "100%",
+    marginTop: 8,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: appTheme.colors.borderMuted,
+    backgroundColor: "rgba(22, 26, 36, 0.92)",
+  },
+  scoreSummaryTitle: {
+    color: appTheme.colors.textMain,
+    fontSize: 16,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  scoreSummaryLine: {
+    color: appTheme.colors.textSub,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  scoreSummaryTotal: {
+    color: appTheme.colors.textMain,
+    fontSize: 15,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 8,
   },
   resultOverlayThreat: {
     color: appTheme.colors.textSub,

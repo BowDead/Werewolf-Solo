@@ -97,6 +97,7 @@ export function createGame(levelKey) {
     levelKey,
     config,
     characters: withStatements,
+    startedAt: Date.now(),
     mistakes: 0,
     foundThreats: 0,
     totalThreats: config.werewolfCount,

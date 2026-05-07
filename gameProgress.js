@@ -1,0 +1,134 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+export const GAME_PROGRESS_KEY = "WEREWOLF_SAVE";
+
+const DIFFICULTY_POINTS = {
+  easy: 120,
+  medium: 180,
+  hard: 260,
+};
+
+const ROUND_TIME_BONUS_SECONDS = 120;
+const CLEAN_PLAY_BONUS = 45;
+const LOSS_PENALTY_MIN = 150;
+const LOSS_PENALTY_MULTIPLIER = 1.25;
+
+export function calculateRoundScore({
+  levelKey,
+  elapsedSeconds,
+  mistakes,
+  maxMistakes,
+}) {
+  const difficultyPoints =
+    DIFFICULTY_POINTS[levelKey] ?? DIFFICULTY_POINTS.easy;
+  const timeBonus = Math.max(0, ROUND_TIME_BONUS_SECONDS - elapsedSeconds) * 2;
+  const mistakesAvoided = Math.max(0, maxMistakes - mistakes);
+  const cleanPlayBonus = mistakesAvoided * CLEAN_PLAY_BONUS;
+  const roundPoints = difficultyPoints + timeBonus + cleanPlayBonus;
+
+  return {
+    difficultyPoints,
+    timeBonus,
+    cleanPlayBonus,
+    mistakesAvoided,
+    roundPoints,
+  };
+}
+
+export function finalizeScoreForRound({
+  currentScore,
+  levelKey,
+  elapsedSeconds,
+  mistakes,
+  maxMistakes,
+  resultType,
+}) {
+  const breakdown = calculateRoundScore({
+    levelKey,
+    elapsedSeconds,
+    mistakes,
+    maxMistakes,
+  });
+  const penalty = Math.max(
+    LOSS_PENALTY_MIN,
+    Math.round(breakdown.roundPoints * LOSS_PENALTY_MULTIPLIER),
+  );
+  const scoreChange = resultType === "win" ? breakdown.roundPoints : -penalty;
+  const nextScore = Math.max(0, currentScore + scoreChange);
+
+  return {
+    ...breakdown,
+    penalty,
+    scoreChange,
+    nextScore,
+  };
+}
+
+export function buildRoundSummary({
+  levelKey,
+  resultType,
+  elapsedSeconds,
+  currentScore,
+  nextScore,
+  scoreChange,
+  difficultyPoints,
+  timeBonus,
+  cleanPlayBonus,
+  mistakesAvoided,
+  roundPoints,
+  penalty,
+}) {
+  return {
+    levelKey,
+    resultType,
+    elapsedSeconds,
+    currentScore,
+    nextScore,
+    scoreChange,
+    difficultyPoints,
+    timeBonus,
+    cleanPlayBonus,
+    mistakesAvoided,
+    roundPoints,
+    penalty,
+  };
+}
+
+export async function loadGameProgress() {
+  try {
+    const raw = await AsyncStorage.getItem(GAME_PROGRESS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export async function saveGameProgress(progress) {
+  try {
+    await AsyncStorage.setItem(GAME_PROGRESS_KEY, JSON.stringify(progress));
+    return progress;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearGameProgress() {
+  try {
+    await AsyncStorage.removeItem(GAME_PROGRESS_KEY);
+  } catch {}
+}
+
+export async function resetSavedScore() {
+  const currentProgress = await loadGameProgress();
+  if (!currentProgress) return null;
+
+  const nextProgress = {
+    ...currentProgress,
+    score: 0,
+    summary: null,
+  };
+
+  await saveGameProgress(nextProgress);
+  return nextProgress;
+}

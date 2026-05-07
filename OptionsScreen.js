@@ -15,6 +15,7 @@
 
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   PanResponder,
   Platform,
   SafeAreaView,
@@ -26,6 +27,7 @@ import {
   View,
 } from "react-native";
 import { appTheme, sharedStyleObjects } from "./appStyles";
+import { resetSavedScore } from "./gameProgress";
 
 // ---------------------------------------------------------------------------
 // SliderRow
@@ -199,6 +201,29 @@ export default function OptionsScreen({
 
   const handleSetVolume = useCallback((val) => setVolume?.(val), [setVolume]);
 
+  const handleResetScore = useCallback(() => {
+    Alert.alert(
+      "Reset score",
+      "This will reset the saved score to 0. Your saved level will stay intact.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reset",
+          style: "destructive",
+          onPress: async () => {
+            const result = await resetSavedScore();
+            if (!result) {
+              Alert.alert("Reset score", "There is no saved score to reset.");
+              return;
+            }
+
+            Alert.alert("Reset score", "Saved score has been reset to zero.");
+          },
+        },
+      ],
+    );
+  }, []);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" />
@@ -256,6 +281,16 @@ export default function OptionsScreen({
               </View>
             </>
           )}
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={[styles.resetScoreButton, { marginTop: sectionGap / 2 }]}
+            onPress={handleResetScore}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.resetScoreButtonText}>Reset saved score</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>
@@ -331,5 +366,22 @@ const styles = StyleSheet.create({
     backgroundColor: appTheme.colors.borderStrong,
     borderRadius: 2,
     marginVertical: 8,
+  },
+  resetScoreButton: {
+    width: "100%",
+    borderRadius: 18,
+    borderWidth: 4,
+    borderColor: appTheme.colors.borderStrong,
+    backgroundColor: "#5D1D1D",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    marginTop: 4,
+  },
+  resetScoreButtonText: {
+    color: appTheme.colors.textMain,
+    fontSize: 18,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
 });

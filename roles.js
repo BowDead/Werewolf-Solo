@@ -1,5 +1,9 @@
 import { doesLie, getGridNeighbours, randomFrom } from "./utils";
 
+function isWerewolfLike(character) {
+  return character.state === "werewolf" || character.role === "recluse";
+}
+
 // ─────────────────────────────────────────────────────────────
 //  ROLES
 //
@@ -99,40 +103,35 @@ export const ROLES = {
   /**
    * WITNESS
    * Points at a random other character and describes them.
-   *   truthful → correctly identifies threats / vouches for innocents
-   *   lying    → inverts the accusation
+   * Werewolves are reported as guilty; villagers and corrupted villagers
+   * are reported as innocent.
    */
   witness: {
     active: true,
     generate(speaker, allChars) {
-      // Truthful: repeatedly select someone who is a genuine villager
-      if (!doesLie(speaker)) {
-        const innocents = allChars.filter(
-          (c) => c.id !== speaker.id && c.state === "villager",
-        );
-        const target = randomFrom(innocents);
-        if (!target) return "I can vouch for no one right now.";
-        return `${target.profession} is innocent.`;
+      const possibleTargets = allChars.filter((c) => c.id !== speaker.id);
+      const target = randomFrom(possibleTargets);
+
+      if (!target) return "I can vouch for no one right now.";
+
+      const targetLooksLikeWerewolf = isWerewolfLike(target);
+
+      if (doesLie(speaker)) {
+        return `${target.profession} is ${targetLooksLikeWerewolf ? "innocent" : "guilty"}.`;
       }
 
-      // Liar: try until they pick a werewolf (prefer actual werewolves)
-      const werewolves = allChars.filter(
-        (c) => c.id !== speaker.id && c.state === "werewolf",
-      );
-      if (werewolves.length) {
-        const target = randomFrom(werewolves);
-        return `${target.profession} is innocent.`;
-      }
+      return `${target.profession} is ${targetLooksLikeWerewolf ? "guilty" : "innocent"}.`;
+    },
+  },
 
-      // Fallback: pick any threatening character (werewolf or corrupted)
-      const threats = allChars.filter(
-        (c) =>
-          c.id !== speaker.id &&
-          (c.state === "werewolf" || c.state === "villager_corrupted"),
-      );
-      const target = threats.length ? randomFrom(threats) : speaker;
-      const name = target.id === speaker.id ? "myself" : target.profession;
-      return `${name} is innocent.`;
+  /**
+   * RECLUSE
+   * Always says they feel unwanted, and everyone else treats them like a werewolf.
+   */
+  recluse: {
+    active: true,
+    generate() {
+      return "No one likes me.";
     },
   },
 
@@ -155,9 +154,7 @@ export const ROLES = {
     generate(speaker, allChars) {
       const neighbours = getGridNeighbours(speaker, allChars);
 
-      const threatCount = neighbours.filter(
-        (c) => c.state === "werewolf",
-      ).length;
+      const threatCount = neighbours.filter((c) => isWerewolfLike(c)).length;
 
       if (!doesLie(speaker)) {
         if (threatCount === 0) return "Next to me are no wolves.";
@@ -196,10 +193,8 @@ export const ROLES = {
         (c) => c.id !== speaker.id && c.position.col === speaker.position.col,
       );
 
-      const rowThreats = rowChars.filter((c) => c.state === "werewolf").length;
-      const columnThreats = columnChars.filter(
-        (c) => c.state === "werewolf",
-      ).length;
+      const rowThreats = rowChars.filter((c) => isWerewolfLike(c)).length;
+      const columnThreats = columnChars.filter((c) => isWerewolfLike(c)).length;
 
       const makeStatement = (lineName, threatCount) => {
         if (threatCount === 0) return `My ${lineName} has no werewolves.`;
