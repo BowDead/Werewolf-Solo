@@ -12,15 +12,15 @@ export const DIFFICULTIES = {
     corruptedCount: 0,
     maxMistakes: 2,
   },
-  medium: {
-    key: "medium",
-    title: "Medium",
-    description: "7 characters • 2 werewolves • 1 corrupted • 1 mistake",
+  normal: {
+    key: "normal",
+    title: "Normal",
+    description: "7 characters • 2 werewolves • 1 corrupted • 2 mistakes",
     characterCount: 7,
     gridCols: 3,
     werewolfCount: 2,
     corruptedCount: 1,
-    maxMistakes: 3,
+    maxMistakes: 2,
   },
   hard: {
     key: "hard",
@@ -30,12 +30,32 @@ export const DIFFICULTIES = {
     gridCols: 3,
     werewolfCount: 3,
     corruptedCount: 1,
-    maxMistakes: 3,
+    maxMistakes: 1,
+  },
+  expert: {
+    key: "expert",
+    title: "Expert",
+    description: "11 characters • 4 werewolves • 1 corrupted • 1 mistake",
+    characterCount: 11,
+    gridCols: 3,
+    werewolfCount: 4,
+    corruptedCount: 1,
+    maxMistakes: 1,
+  },
+  insane: {
+    key: "insane",
+    title: "Insane",
+    description: "13 characters • 5 werewolves • 0 mistakes",
+    characterCount: 13,
+    gridCols: 3,
+    werewolfCount: 5,
+    corruptedCount: 0,
+    maxMistakes: 0,
   },
 };
 
 // progression order
-export const DIFFICULTY_ORDER = ["easy", "medium", "hard"];
+export const DIFFICULTY_ORDER = ["easy", "normal", "hard", "expert", "insane"];
 
 // ─────────────────────────────────────────────────────────────
 //  PROFESSIONS

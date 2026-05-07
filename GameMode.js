@@ -29,7 +29,7 @@ import {
 //  Set to true to show each character's role and state on their
 //  card during gameplay. Flip back to false before shipping.
 // ─────────────────────────────────────────────────────────────
-const DEV_MODE = true;
+const DEV_MODE = false;
 
 // Labels shown in the debug badge
 const DEV_STATE_LABEL = {
@@ -47,6 +47,7 @@ export default function GameMode({ onExit }) {
   const [game, setGame] = useState(null);
   const [activeSpeakerId, setActiveSpeakerId] = useState(null);
   const [levelIndex, setLevelIndex] = useState(0);
+  const [gamesAtLevel, setGamesAtLevel] = useState(0);
   const [score, setScore] = useState(0);
   const [hasSave, setHasSave] = useState(false);
   const [lastSummary, setLastSummary] = useState(null);
@@ -56,6 +57,7 @@ export default function GameMode({ onExit }) {
     loadProgress().then((data) => {
       if (data) {
         setLevelIndex(data.levelIndex ?? 0);
+        setGamesAtLevel(data.gamesAtLevel ?? 0);
         setScore(data.score ?? 0);
         setLastSummary(data.summary ?? null);
         setHasSave(true);
@@ -90,11 +92,12 @@ export default function GameMode({ onExit }) {
 
   // ── Actions ───────────────────────────────────────────────
 
-  const startGameAtIndex = (index, newScore = score) => {
+  const startGameAtIndex = (index, newScore = score, games = gamesAtLevel) => {
     const levelKey = DIFFICULTY_ORDER[index];
     const newGame = createGame(levelKey);
 
     setLevelIndex(index);
+    setGamesAtLevel(games);
     setScore(newScore);
     setGame(newGame);
     setActiveSpeakerId(null);
@@ -103,6 +106,7 @@ export default function GameMode({ onExit }) {
 
     saveGameProgress({
       levelIndex: index,
+      gamesAtLevel: games,
       score: newScore,
       summary: lastSummary,
     });
@@ -122,10 +126,20 @@ export default function GameMode({ onExit }) {
       maxMistakes: nextGameState.config.maxMistakes,
       resultType,
     });
-    const newLevelIndex =
-      resultType === "win"
-        ? Math.min(levelIndex + 1, DIFFICULTY_ORDER.length - 1)
-        : 0;
+    const newGamesAtLevel = gamesAtLevel + 1;
+    let newLevelIndex = levelIndex;
+    let newGamesCounter = newGamesAtLevel;
+
+    if (resultType === "win" && newGamesAtLevel >= 3) {
+      // Advance to next difficulty after 3 games
+      newLevelIndex = Math.min(levelIndex + 1, DIFFICULTY_ORDER.length - 1);
+      newGamesCounter = 0;
+    } else if (resultType === "lose") {
+      // Reset to easy on loss
+      newLevelIndex = 0;
+      newGamesCounter = 0;
+    }
+
     const newScore = scoreDetails.nextScore;
     const summary = buildRoundSummary({
       levelKey: nextGameState.levelKey,
@@ -143,12 +157,14 @@ export default function GameMode({ onExit }) {
     });
 
     setLevelIndex(newLevelIndex);
+    setGamesAtLevel(newGamesCounter);
     setScore(newScore);
     setLastSummary(summary);
     setShowResultOverlay(true);
 
     saveGameProgress({
       levelIndex: newLevelIndex,
+      gamesAtLevel: newGamesCounter,
       score: newScore,
       summary,
     });
@@ -570,7 +586,7 @@ export default function GameMode({ onExit }) {
           <TouchableOpacity
             style={menuStyles.menuButton}
             onPress={() => {
-              startGameAtIndex(0, score);
+              startGameAtIndex(0, 0, 0);
             }}
           >
             <Text style={menuStyles.menuButtonTitle}>New Game</Text>

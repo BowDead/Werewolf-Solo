@@ -4,8 +4,10 @@ export const GAME_PROGRESS_KEY = "WEREWOLF_SAVE";
 
 const DIFFICULTY_POINTS = {
   easy: 120,
-  medium: 180,
-  hard: 260,
+  normal: 160,
+  hard: 220,
+  expert: 300,
+  insane: 400,
 };
 
 const ROUND_TIME_BONUS_SECONDS = 120;
@@ -49,15 +51,11 @@ export function finalizeScoreForRound({
     mistakes,
     maxMistakes,
   });
-  const penalty =
-    resultType === "lose"
-      ? Math.max(
-          LOSS_PENALTY_MIN,
-          Math.round(breakdown.roundPoints * LOSS_PENALTY_MULTIPLIER),
-        )
-      : 0;
-  const scoreChange = resultType === "win" ? breakdown.roundPoints : -penalty;
-  const nextScore = Math.max(0, currentScore + scoreChange);
+  const penalty = 0;
+  const scoreChange =
+    resultType === "win" ? breakdown.roundPoints : -currentScore;
+  const nextScore =
+    resultType === "win" ? currentScore + breakdown.roundPoints : 0;
 
   return {
     ...breakdown,
