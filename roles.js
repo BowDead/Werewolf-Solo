@@ -36,6 +36,18 @@ export const ROLES = {
   },
 
   /**
+   * PRESIDENT
+   * Always says the same line, regardless of alignment.
+   * Special accusation handling for this role is implemented in GameMode.
+   */
+  president: {
+    active: true,
+    generate() {
+      return "I cannot be accused.";
+    },
+  },
+
+  /**
    * WITNESS
    * Points at a random other character and describes them.
    *   truthful → correctly identifies threats / vouches for innocents

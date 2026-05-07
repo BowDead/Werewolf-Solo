@@ -152,8 +152,21 @@ export default function GameMode({ onExit }) {
     );
 
     const isThreat = selected.state === "werewolf";
+    const isPresident = selected.role === "president";
 
-    const nextMistakes = isThreat ? game.mistakes : game.mistakes + 1;
+    // President rule:
+    // - villager president: no mistake
+    // - werewolf president: no mistake (already true via isThreat)
+    // - corrupted president: +2 mistakes
+    let mistakeCost = isThreat ? 0 : 1;
+    if (isPresident && selected.state === "villager") {
+      mistakeCost = 0;
+    }
+    if (isPresident && selected.state === "villager_corrupted") {
+      mistakeCost = 2;
+    }
+
+    const nextMistakes = game.mistakes + mistakeCost;
     const nextFoundThreats = isThreat
       ? game.foundThreats + 1
       : game.foundThreats;
@@ -421,7 +434,7 @@ export default function GameMode({ onExit }) {
           >
             <View style={styles.revealHintChip}>
               <Text style={styles.revealHintText}>
-                Tap anywhere to show summary
+                Click here to show summary
               </Text>
             </View>
           </Pressable>
