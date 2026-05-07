@@ -48,6 +48,55 @@ export const ROLES = {
   },
 
   /**
+   * DOCTOR
+   * Reports how many corrupted characters are adjacent (orthogonal only).
+   * Lying variants report a random wrong count, biased toward 0 or 1.
+   */
+  doctor: {
+    active: true,
+    generate(speaker, allChars) {
+      const neighbours = getGridNeighbours(speaker, allChars);
+      const corruptedCount = neighbours.filter(
+        (c) => c.state === "villager_corrupted",
+      ).length;
+
+      if (!doesLie(speaker)) {
+        if (corruptedCount === 0) return "Next to me are no corrupted.";
+        if (corruptedCount === 1) return "Next to me is 1 corrupted.";
+        return `Next to me are ${corruptedCount} corrupted.`;
+      }
+
+      const neighbourCount = neighbours.length;
+      const possibleCounts = Array.from(
+        { length: neighbourCount + 1 },
+        (_, i) => i,
+      ).filter((n) => n !== corruptedCount);
+
+      // Bias fake reports toward 0/1 while keeping other values possible.
+      const weighted = [];
+      if (possibleCounts.includes(0)) weighted.push(0, 0, 0);
+      if (possibleCounts.includes(1)) weighted.push(1, 1, 1);
+      weighted.push(...possibleCounts);
+
+      const fakeCount = randomFrom(
+        weighted.length ? weighted : [corruptedCount === 0 ? 1 : 0],
+      );
+
+      // Safety guard: a lying doctor must never report the true value.
+      const guaranteedFakeCount =
+        fakeCount === corruptedCount
+          ? corruptedCount === 0
+            ? 1
+            : 0
+          : fakeCount;
+
+      if (guaranteedFakeCount === 0) return "Next to me are no corrupted.";
+      if (guaranteedFakeCount === 1) return "Next to me is 1 corrupted.";
+      return `Next to me are ${guaranteedFakeCount} corrupted.`;
+    },
+  },
+
+  /**
    * WITNESS
    * Points at a random other character and describes them.
    *   truthful → correctly identifies threats / vouches for innocents

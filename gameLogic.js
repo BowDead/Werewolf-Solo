@@ -18,8 +18,8 @@ function buildRolePool(characterCount) {
   if (ROLES.confessor && ROLES.confessor.active) pool.push("confessor");
   if (ROLES.watchman && ROLES.watchman.active) pool.push("watchman");
 
-  // Fill remaining slots preferring neighbour -> witness -> president -> any active role
-  const preferred = ["neighbour", "witness", "president"];
+  // Fill remaining slots preferring neighbour -> witness -> doctor -> president -> any active role
+  const preferred = ["neighbour", "witness", "doctor", "president"];
 
   while (pool.length < targetSize) {
     // build candidate list based on preference and availability
