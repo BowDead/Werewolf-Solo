@@ -49,10 +49,13 @@ export function finalizeScoreForRound({
     mistakes,
     maxMistakes,
   });
-  const penalty = Math.max(
-    LOSS_PENALTY_MIN,
-    Math.round(breakdown.roundPoints * LOSS_PENALTY_MULTIPLIER),
-  );
+  const penalty =
+    resultType === "lose"
+      ? Math.max(
+          LOSS_PENALTY_MIN,
+          Math.round(breakdown.roundPoints * LOSS_PENALTY_MULTIPLIER),
+        )
+      : 0;
   const scoreChange = resultType === "win" ? breakdown.roundPoints : -penalty;
   const nextScore = Math.max(0, currentScore + scoreChange);
 

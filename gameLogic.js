@@ -1,8 +1,21 @@
 import { DIFFICULTIES, PROFESSIONS } from "./constants";
-import { ROLES } from "./roles";
+import { ROLE_ROLL_CHANCES, ROLES } from "./roles";
 import { shuffle, doesLie, getGridNeighbours } from "./utils";
 
 export { shuffle, doesLie, getGridNeighbours };
+
+function pickWeightedRole(activeRoles) {
+  const weightedPool = activeRoles.flatMap((role) => {
+    const chance = ROLE_ROLL_CHANCES[role] ?? 1;
+    return Array.from({ length: chance }, () => role);
+  });
+
+  if (!weightedPool.length) {
+    return "confessor";
+  }
+
+  return shuffle(weightedPool)[0];
+}
 
 function buildRolePoolByState(states) {
   const activeRoles = Object.keys(ROLES).filter((r) => ROLES[r].active);
@@ -23,13 +36,9 @@ function buildRolePoolByState(states) {
     villagerLikeIndexes.push(index);
   });
 
-  // Villagers + corrupted villagers: distribute random roles without repeats first.
-  let cycle = shuffle([...activeRoles]);
-  villagerLikeIndexes.forEach((index, i) => {
-    if (i > 0 && i % activeRoles.length === 0) {
-      cycle = shuffle([...activeRoles]);
-    }
-    roles[index] = cycle[i % activeRoles.length];
+  // Villagers + corrupted villagers: draw from the weighted table.
+  villagerLikeIndexes.forEach((index) => {
+    roles[index] = pickWeightedRole(activeRoles);
   });
 
   // Werewolves: random roles with a slight chance to repeat a role already seen.
@@ -43,9 +52,9 @@ function buildRolePoolByState(states) {
       const repeatPool = [...werewolfAssignedRoles, ...villagerLikeRoles];
       chosenRole = repeatPool.length
         ? shuffle(repeatPool)[0]
-        : shuffle([...activeRoles])[0];
+        : pickWeightedRole(activeRoles);
     } else {
-      chosenRole = shuffle([...activeRoles])[0];
+      chosenRole = pickWeightedRole(activeRoles);
     }
 
     roles[index] = chosenRole;

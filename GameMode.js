@@ -440,6 +440,7 @@ export default function GameMode({ onExit }) {
   const renderResultOverlay = () => {
     const isWin = game.result === "win";
     const summary = game.summary ?? lastSummary;
+    const isLoss = !isWin;
 
     if (!showResultOverlay) {
       return (
@@ -473,7 +474,7 @@ export default function GameMode({ onExit }) {
               ? "You found all hidden enemies."
               : "The mistake limit has been reached."}
           </Text>
-          {summary && (
+          {summary && isWin && (
             <View style={styles.scoreSummaryBox}>
               <Text style={styles.scoreSummaryTitle}>Summary</Text>
               <Text style={styles.scoreSummaryLine}>
@@ -499,6 +500,11 @@ export default function GameMode({ onExit }) {
                 Total score: {summary.nextScore}
               </Text>
             </View>
+          )}
+          {summary && isLoss && summary.penalty > 0 && (
+            <Text style={styles.lossPenaltyText}>
+              Loss penalty: -{summary.penalty}
+            </Text>
           )}
           <Text style={styles.resultOverlayText}>Hidden enemies:</Text>
           {threats.map((t) => (
@@ -844,6 +850,14 @@ const styles = StyleSheet.create({
     color: appTheme.colors.textSub,
     fontSize: 16,
     textAlign: "center",
+  },
+  lossPenaltyText: {
+    color: appTheme.colors.textMain,
+    fontSize: 16,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 6,
+    marginBottom: 2,
   },
   scoreSummaryBox: {
     width: "100%",

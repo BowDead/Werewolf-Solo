@@ -268,3 +268,15 @@ export const ROLES = {
     },
   },
 };
+
+// Source of truth for role roll chances.
+// When adding a new active role, update this table too so the chance split stays explicit.
+export const ROLE_ROLL_CHANCES = {
+  confessor: 2,
+  president: 1,
+  doctor: 2,
+  witness: 5,
+  neighbour: 5,
+  watchman: 5,
+  recluse: 1,
+};
