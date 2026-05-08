@@ -261,10 +261,9 @@ export const ROLES = {
   },
 
   silent: {
-    // TODO: says nothing useful — a red herring
-    active: false,
+    active: true,
     generate(/* speaker, allChars */) {
-      return "";
+      return "...";
     },
   },
 };
@@ -272,11 +271,12 @@ export const ROLES = {
 // Source of truth for role roll chances.
 // When adding a new active role, update this table too so the chance split stays explicit.
 export const ROLE_ROLL_CHANCES = {
-  confessor: 2,
-  president: 20,
-  doctor: 2,
-  witness: 5,
-  neighbour: 5,
-  watchman: 5,
-  recluse: 1,
+  confessor: 4,
+  president: 2,
+  doctor: 4,
+  witness: 10,
+  neighbour: 10,
+  watchman: 10,
+  recluse: 2,
+  silent: 1,
 };
