@@ -273,7 +273,7 @@ export const ROLES = {
 // When adding a new active role, update this table too so the chance split stays explicit.
 export const ROLE_ROLL_CHANCES = {
   confessor: 2,
-  president: 1,
+  president: 20,
   doctor: 2,
   witness: 5,
   neighbour: 5,

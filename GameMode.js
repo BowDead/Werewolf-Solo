@@ -179,12 +179,16 @@ export default function GameMode({ onExit }) {
     const selected = game.characters.find((c) => c.id === characterId);
     if (!selected || selected.accused) return;
 
+    const isPresident = selected.role === "president";
+    if (isPresident && selected.state === "villager") {
+      return;
+    }
+
     const updatedCharacters = game.characters.map((c) =>
       c.id === characterId ? { ...c, accused: true } : c,
     );
 
     const isThreat = selected.state === "werewolf";
-    const isPresident = selected.role === "president";
 
     // President rule:
     // - villager president: no mistake
