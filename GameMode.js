@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Image,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -52,6 +53,8 @@ export default function GameMode({ onExit }) {
   const [hasSave, setHasSave] = useState(false);
   const [lastSummary, setLastSummary] = useState(null);
   const [showResultOverlay, setShowResultOverlay] = useState(true);
+  const [markMode, setMarkMode] = useState(false);
+  const exitPenaltyLockRef = useRef(false);
 
   useEffect(() => {
     loadProgress().then((data) => {
@@ -103,6 +106,7 @@ export default function GameMode({ onExit }) {
     setActiveSpeakerId(null);
     setPhase("playing");
     setShowResultOverlay(true);
+    exitPenaltyLockRef.current = false;
 
     saveGameProgress({
       levelIndex: index,
@@ -171,6 +175,23 @@ export default function GameMode({ onExit }) {
 
     setGame({ ...nextGameState, result: resultType, summary });
     setPhase("result");
+  };
+
+  const toggleCharacterMark = (characterId) => {
+    if (!game || game.result) return;
+
+    const selected = game.characters.find((c) => c.id === characterId);
+    if (!selected) return;
+
+    const marks = { none: 0, green: 1, yellow: 2, red: 3 };
+    const nextMarkIndex = (marks[selected.mark || "none"] + 1) % 4;
+    const markKeys = Object.keys(marks).find((k) => marks[k] === nextMarkIndex);
+
+    const updatedCharacters = game.characters.map((c) =>
+      c.id === characterId ? { ...c, mark: markKeys } : c,
+    );
+
+    setGame({ ...game, characters: updatedCharacters });
   };
 
   const accuseCharacter = (characterId) => {
@@ -255,6 +276,15 @@ export default function GameMode({ onExit }) {
   const renderGameBoard = () => (
     <SafeAreaView style={menuStyles.safeArea}>
       <StatusBar barStyle="light-content" />
+
+      <TouchableOpacity
+        style={styles.toggleMarkButton}
+        onPress={() => setMarkMode(!markMode)}
+      >
+        <Text style={styles.toggleMarkButtonText}>
+          {markMode ? "✓ Mark" : "Accuse"}
+        </Text>
+      </TouchableOpacity>
 
       <View style={styles.headerBox}>
         <Text style={styles.headerTitle}>Werewolf Solo</Text>
@@ -353,6 +383,19 @@ export default function GameMode({ onExit }) {
                   </View>
                 )}
 
+                {character.mark && character.mark !== "none" && (
+                  <View
+                    style={[
+                      styles.markBadge,
+                      character.mark === "red" && styles.markBadgeRed,
+                      character.mark === "green" && styles.markBadgeGreen,
+                      character.mark === "yellow" && styles.markBadgeYellow,
+                    ]}
+                  >
+                    <Text style={styles.markBadgeText}>!</Text>
+                  </View>
+                )}
+
                 <Text style={styles.cardTitle}>{character.profession}</Text>
 
                 {isEndgame && (
@@ -416,8 +459,12 @@ export default function GameMode({ onExit }) {
                         ? styles.accuseButtonDisabled
                         : null,
                     ]}
-                    onPress={() => accuseCharacter(character.id)}
-                    disabled={character.accused}
+                    onPress={() =>
+                      markMode
+                        ? toggleCharacterMark(character.id)
+                        : accuseCharacter(character.id)
+                    }
+                    disabled={character.accused && !markMode}
                   >
                     <Text
                       style={[
@@ -430,13 +477,21 @@ export default function GameMode({ onExit }) {
                         },
                       ]}
                     >
-                      {character.accused
-                        ? character.state === "werewolf"
-                          ? "Werewolf"
-                          : character.state === "villager_corrupted"
-                            ? "Corrupted"
-                            : "Villager"
-                        : "Accuse"}
+                      {markMode
+                        ? character.mark === "red"
+                          ? "🔴 Mark"
+                          : character.mark === "green"
+                            ? "🟢 Mark"
+                            : character.mark === "yellow"
+                              ? "🟡 Mark"
+                              : "Mark"
+                        : character.accused
+                          ? character.state === "werewolf"
+                            ? "Werewolf"
+                            : character.state === "villager_corrupted"
+                              ? "Corrupted"
+                              : "Villager"
+                          : "Accuse"}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -449,7 +504,53 @@ export default function GameMode({ onExit }) {
       <View style={styles.footerBox}>
         <TouchableOpacity
           style={menuStyles.secondaryButton}
-          onPress={() => setPhase("menu")}
+          onPress={() => {
+            if (exitPenaltyLockRef.current) return;
+
+            exitPenaltyLockRef.current = true;
+            const penalizedScore = Math.floor(score / 2);
+
+            const handleConfirm = (confirmed) => {
+              if (confirmed) {
+                setScore(penalizedScore);
+                setPhase("menu");
+
+                saveGameProgress({
+                  levelIndex,
+                  gamesAtLevel,
+                  score: penalizedScore,
+                  summary: lastSummary,
+                });
+                setHasSave(true);
+              } else {
+                exitPenaltyLockRef.current = false;
+              }
+            };
+
+            if (Platform.OS === "web") {
+              const confirmed = window.confirm(
+                `Leave round?\n\nLeaving this round now will halve your score (${score} → ${penalizedScore}). Continue?`,
+              );
+              handleConfirm(confirmed);
+            } else {
+              Alert.alert(
+                "Leave round?",
+                `Leaving this round now will halve your score (${score} → ${penalizedScore}). Continue?`,
+                [
+                  {
+                    text: "Continue",
+                    onPress: () => handleConfirm(false),
+                    style: "cancel",
+                  },
+                  {
+                    text: "Leave round",
+                    onPress: () => handleConfirm(true),
+                    style: "destructive",
+                  },
+                ],
+              );
+            }
+          }}
         >
           <Text style={menuStyles.secondaryButtonText}>Back to menu</Text>
         </TouchableOpacity>
@@ -660,6 +761,59 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 8,
     textAlign: "center",
+  },
+
+  // ── Toggle Mark Button ─────────────────────────────────────
+  toggleMarkButton: {
+    position: "absolute",
+    top: 48,
+    right: 18,
+    zIndex: 100,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: appTheme.colors.action,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: appTheme.colors.borderStrong,
+  },
+  toggleMarkButtonText: {
+    color: "#090909",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  // ── Mark Badge ─────────────────────────────────────────────
+  markBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  markBadgeRed: {
+    backgroundColor: "#EB5757",
+    borderWidth: 1,
+    borderColor: "#8B2020",
+  },
+  markBadgeGreen: {
+    backgroundColor: "#6FCF97",
+    borderWidth: 1,
+    borderColor: "#2F5233",
+  },
+  markBadgeYellow: {
+    backgroundColor: "#F2C94C",
+    borderWidth: 1,
+    borderColor: "#C9B14A",
+  },
+  markBadgeText: {
+    color: "#0B0B0B",
+    fontSize: 14,
+    fontWeight: "800",
+    lineHeight: 16,
   },
 
   // ── Dev mode ───────────────────────────────────────────────

@@ -210,21 +210,17 @@ export const ROLES = {
         return makeStatement(line.name, line.threats);
       }
 
-      const safeLines = [
+      // Liar: pick a line and invert the threat count
+      const lines = [
         { name: "row", threats: rowThreats },
         { name: "column", threats: columnThreats },
-      ].filter((line) => line.threats === 0);
+      ];
+      const chosenLine = randomFrom(lines);
 
-      if (safeLines.length) {
-        return makeStatement(randomFrom(safeLines).name, 0);
-      }
+      // Invert: if truth says 0, lie says 1; if truth says non-zero, lie says 0
+      const fakeThreatCount = chosenLine.threats === 0 ? 1 : 0;
 
-      const saferLine =
-        rowThreats <= columnThreats
-          ? { name: "row", threats: rowThreats }
-          : { name: "column", threats: columnThreats };
-
-      return makeStatement(saferLine.name, 0);
+      return makeStatement(chosenLine.name, fakeThreatCount);
     },
   },
 
