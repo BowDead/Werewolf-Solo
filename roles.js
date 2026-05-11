@@ -225,34 +225,76 @@ export const ROLES = {
   },
 
   /**
-   * VOUCHER
-   * Picks a random character and publicly vouches for their innocence.
+   * DIVINER
+   * Picks 3 random other characters and reports whether exactly one is a werewolf.
    *
-   *   truthful → picks a genuine villager (state === "villager") and
-   *              correctly declares them innocent.
-   *
-   *   lying    → picks a werewolf or corrupted character and
-   *              falsely declares them innocent, trying to protect them.
-   *              Falls back to vouching for themselves if no other
-   *              lying characters exist in the game.
+   *   truthful → picks a group with exactly 1 werewolf-like and says one is
+   *   lying    → picks a group with 0 werewolves and falsely says one is
    */
-  // voucher removed; behavior merged into `witness` per rules
+  diviner: {
+    active: true,
+    generate(speaker, allChars) {
+      const candidates = allChars.filter((c) => c.id !== speaker.id);
 
-  // ── Empty stubs — add generate() to activate ─────────────
+      if (candidates.length < 3) {
+        return "Not enough people to divine.";
+      }
 
-  alibi_provider: {
-    // TODO: vouches for a specific other character
-    active: false,
-    generate(/* speaker, allChars */) {
-      return "";
-    },
-  },
+      // Helper to pick N random distinct elements
+      const pickDistinct = (arr, n) => {
+        const result = [];
+        const temp = [...arr];
+        for (let i = 0; i < n && temp.length > 0; i++) {
+          const idx = Math.floor(Math.random() * temp.length);
+          result.push(temp[idx]);
+          temp.splice(idx, 1);
+        }
+        return result;
+      };
 
-  accuser: {
-    // TODO: always points a finger, never defends
-    active: false,
-    generate(/* speaker, allChars */) {
-      return "";
+      if (!doesLie(speaker)) {
+        // Truthful: find 3 characters where exactly 1 is a werewolf-like
+        let chosen = [];
+        let attempts = 0;
+
+        while (attempts < 100) {
+          chosen = pickDistinct(candidates, 3);
+          const werewolfCount = chosen.filter((c) => isWerewolfLike(c)).length;
+          if (werewolfCount === 1) {
+            break;
+          }
+          attempts++;
+        }
+
+        // Fallback if no suitable group exists
+        if (chosen.filter((c) => isWerewolfLike(c)).length !== 1) {
+          return "I sense conflicting threads around me.";
+        }
+
+        const names = chosen.map((c) => c.profession).join(", ");
+        return `Either ${names} is a werewolf.`;
+      }
+
+      // Liar: find 3 characters where none are werewolf-like, then lie
+      let chosen = [];
+      let attempts = 0;
+
+      while (attempts < 100) {
+        chosen = pickDistinct(candidates, 3);
+        const werewolfCount = chosen.filter((c) => isWerewolfLike(c)).length;
+        if (werewolfCount === 0) {
+          break;
+        }
+        attempts++;
+      }
+
+      // Fallback if no suitable group exists
+      if (chosen.filter((c) => isWerewolfLike(c)).length !== 0) {
+        return "I see only innocents in my visions.";
+      }
+
+      const names = chosen.map((c) => c.profession).join(", ");
+      return `Either ${names} is a werewolf.`;
     },
   },
 
@@ -269,10 +311,11 @@ export const ROLES = {
 export const ROLE_ROLL_CHANCES = {
   confessor: 4,
   president: 2,
-  doctor: 4,
+  doctor: 3,
   witness: 10,
   neighbour: 10,
   watchman: 10,
+  diviner: 8,
   recluse: 2,
   silent: 1,
 };
