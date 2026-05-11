@@ -37,6 +37,7 @@ export default function App() {
   const [screen, setScreen] = useState("menu");
   const [volume, setVolume] = useState(60);
   const [musicOn, setMusicOn] = useState(true);
+  const [showAccuseAlerts, setShowAccuseAlerts] = useState(true);
   const soundRef = useRef(null);
 
   const { height } = useWindowDimensions();
@@ -125,7 +126,12 @@ export default function App() {
 
   // ── Screen routing ────────────────────────────────────────────────────────
   if (screen === "game") {
-    return <GameMode onExit={() => setScreen("menu")} />;
+    return (
+      <GameMode
+        onExit={() => setScreen("menu")}
+        showAccuseAlerts={showAccuseAlerts}
+      />
+    );
   }
 
   if (screen === "options") {
@@ -136,6 +142,8 @@ export default function App() {
         setVolume={setVolume}
         musicOn={musicOn}
         setMusicOn={setMusicOn}
+        showAccuseAlerts={showAccuseAlerts}
+        setShowAccuseAlerts={setShowAccuseAlerts}
         hasBgMusic={hasBgMusic}
       />
     );

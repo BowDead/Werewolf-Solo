@@ -35,20 +35,16 @@ import { appTheme, sharedStyleObjects } from "./appStyles";
 // or deeply nested Views and causes NaN.
 // ---------------------------------------------------------------------------
 function SliderRow({ value, onChange }) {
-  const trackRef = useRef(null);
   const trackWidthRef = useRef(1);
-  const trackXRef = useRef(0);
 
-  // Re-measure whenever the layout changes (rotation, first render, etc.)
-  const onLayout = useCallback(() => {
-    trackRef.current?.measure((_x, _y, w, _h, pageX) => {
-      if (w > 0) trackWidthRef.current = w;
-      trackXRef.current = pageX ?? 0;
-    });
+  // Keep width in sync on layout changes (rotation, first render, etc.)
+  const onLayout = useCallback((evt) => {
+    const width = evt?.nativeEvent?.layout?.width ?? 0;
+    if (width > 0) trackWidthRef.current = width;
   }, []);
 
-  const toValue = useCallback((pageX) => {
-    const ratio = (pageX - trackXRef.current) / trackWidthRef.current;
+  const toValue = useCallback((locationX) => {
+    const ratio = locationX / trackWidthRef.current;
     return Math.round(Math.max(0, Math.min(1, ratio)) * 100);
   }, []);
 
@@ -57,15 +53,16 @@ function SliderRow({ value, onChange }) {
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: (evt) => onChange(toValue(evt.nativeEvent.pageX)),
-        onPanResponderMove: (evt) => onChange(toValue(evt.nativeEvent.pageX)),
+        onPanResponderGrant: (evt) =>
+          onChange(toValue(evt.nativeEvent.locationX)),
+        onPanResponderMove: (evt) =>
+          onChange(toValue(evt.nativeEvent.locationX)),
       }),
     [onChange, toValue],
   );
 
   return (
     <View
-      ref={trackRef}
       onLayout={onLayout}
       style={sliderStyles.track}
       {...panResponder.panHandlers}
@@ -173,6 +170,8 @@ export default function OptionsScreen({
   setVolume,
   musicOn = true,
   setMusicOn,
+  showAccuseAlerts = true,
+  setShowAccuseAlerts,
   hasBgMusic = false,
 }) {
   const { width, height } = useWindowDimensions();
@@ -257,6 +256,15 @@ export default function OptionsScreen({
               </View>
             </>
           )}
+
+          <View style={styles.divider} />
+          <View style={{ marginTop: sectionGap }}>
+            <ToggleRow
+              label="Accusation Popups"
+              enabled={showAccuseAlerts}
+              onToggle={() => setShowAccuseAlerts?.((v) => !v)}
+            />
+          </View>
         </View>
       </View>
     </SafeAreaView>

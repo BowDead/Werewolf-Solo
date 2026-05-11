@@ -42,8 +42,9 @@ const DEV_STATE_LABEL = {
 // ─────────────────────────────────────────────────────────────
 //  COMPONENT
 // ─────────────────────────────────────────────────────────────
-export default function GameMode({ onExit }) {
+export default function GameMode({ onExit, showAccuseAlerts = true }) {
   const { width } = useWindowDimensions();
+  const isMobile = Platform.OS !== "web";
   const [phase, setPhase] = useState("menu");
   const [game, setGame] = useState(null);
   const [activeSpeakerId, setActiveSpeakerId] = useState(null);
@@ -235,14 +236,16 @@ export default function GameMode({ onExit }) {
       foundThreats: nextFoundThreats,
     };
 
-    if (isThreat) {
-      const label =
-        selected.state === "villager_corrupted"
-          ? "corrupted villager"
-          : "werewolf";
-      Alert.alert("Correct", `${selected.profession} is a ${label}.`);
-    } else {
-      Alert.alert("Wrong", `${selected.profession} is innocent.`);
+    if (showAccuseAlerts) {
+      if (isThreat) {
+        const label =
+          selected.state === "villager_corrupted"
+            ? "corrupted villager"
+            : "werewolf";
+        Alert.alert("Correct", `${selected.profession} is a ${label}.`);
+      } else {
+        Alert.alert("Wrong", `${selected.profession} is innocent.`);
+      }
     }
 
     if (nextFoundThreats >= game.totalThreats) {
@@ -272,19 +275,69 @@ export default function GameMode({ onExit }) {
     136,
     Math.min(220, Math.floor((width - 28) / 3) * 2),
   );
+  const quoteFontScale = isMobile ? 0.42 : 0.52;
+  const accuseLabelFontScale = isMobile ? 0.56 : 0.72;
+  const professionFontScale = isMobile ? 0.62 : 0.9;
+  const markBadgeSize = isMobile ? 18 : 24;
+  const markBadgeFontSize = isMobile ? 11 : 14;
+
+  const handleBackToMenuPress = () => {
+    // After a finished round, going back to menu should never apply exit penalty.
+    if (phase !== "playing") {
+      setPhase("menu");
+      return;
+    }
+
+    if (exitPenaltyLockRef.current) return;
+
+    exitPenaltyLockRef.current = true;
+    const penalizedScore = Math.floor(score / 2);
+
+    const handleConfirm = (confirmed) => {
+      if (confirmed) {
+        setScore(penalizedScore);
+        setPhase("menu");
+
+        saveGameProgress({
+          levelIndex,
+          gamesAtLevel,
+          score: penalizedScore,
+          summary: lastSummary,
+        });
+        setHasSave(true);
+      } else {
+        exitPenaltyLockRef.current = false;
+      }
+    };
+
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(
+        `Leave round?\n\nLeaving this round now will halve your score (${score} → ${penalizedScore}). Continue?`,
+      );
+      handleConfirm(confirmed);
+    } else {
+      Alert.alert(
+        "Leave round?",
+        `Leaving this round now will halve your score (${score} → ${penalizedScore}). Continue?`,
+        [
+          {
+            text: "Continue",
+            onPress: () => handleConfirm(false),
+            style: "cancel",
+          },
+          {
+            text: "Leave round",
+            onPress: () => handleConfirm(true),
+            style: "destructive",
+          },
+        ],
+      );
+    }
+  };
 
   const renderGameBoard = () => (
     <SafeAreaView style={menuStyles.safeArea}>
       <StatusBar barStyle="light-content" />
-
-      <TouchableOpacity
-        style={styles.toggleMarkButton}
-        onPress={() => setMarkMode(!markMode)}
-      >
-        <Text style={styles.toggleMarkButtonText}>
-          {markMode ? "✓ Mark" : "Accuse"}
-        </Text>
-      </TouchableOpacity>
 
       <View style={styles.headerBox}>
         <Text style={styles.headerTitle}>Werewolf Solo</Text>
@@ -387,16 +440,38 @@ export default function GameMode({ onExit }) {
                   <View
                     style={[
                       styles.markBadge,
+                      {
+                        width: markBadgeSize,
+                        height: markBadgeSize,
+                      },
                       character.mark === "red" && styles.markBadgeRed,
                       character.mark === "green" && styles.markBadgeGreen,
                       character.mark === "yellow" && styles.markBadgeYellow,
                     ]}
                   >
-                    <Text style={styles.markBadgeText}>!</Text>
+                    <Text
+                      style={[
+                        styles.markBadgeText,
+                        {
+                          fontSize: markBadgeFontSize,
+                          lineHeight: markBadgeFontSize + 2,
+                        },
+                      ]}
+                    >
+                      !
+                    </Text>
                   </View>
                 )}
 
-                <Text style={styles.cardTitle}>{character.profession}</Text>
+                <Text
+                  style={styles.cardTitle}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={professionFontScale}
+                  textBreakStrategy="simple"
+                >
+                  {character.profession}
+                </Text>
 
                 {isEndgame && (
                   <View style={styles.endgameStateRow}>
@@ -434,9 +509,10 @@ export default function GameMode({ onExit }) {
                           .textWeight,
                       },
                     ]}
-                    numberOfLines={4}
+                    numberOfLines={isMobile ? 4 : 5}
                     adjustsFontSizeToFit
-                    minimumFontScale={0.72}
+                    minimumFontScale={quoteFontScale}
+                    textBreakStrategy="simple"
                   >
                     {character.statement}
                   </Text>
@@ -476,15 +552,12 @@ export default function GameMode({ onExit }) {
                             .buttonTextWeight,
                         },
                       ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={accuseLabelFontScale}
                     >
                       {markMode
-                        ? character.mark === "red"
-                          ? "🔴 Mark"
-                          : character.mark === "green"
-                            ? "🟢 Mark"
-                            : character.mark === "yellow"
-                              ? "🟡 Mark"
-                              : "Mark"
+                        ? "Mark"
                         : character.accused
                           ? character.state === "werewolf"
                             ? "Werewolf"
@@ -503,54 +576,27 @@ export default function GameMode({ onExit }) {
 
       <View style={styles.footerBox}>
         <TouchableOpacity
-          style={menuStyles.secondaryButton}
+          style={[menuStyles.secondaryButton, styles.toggleMarkButton]}
           onPress={() => {
-            if (exitPenaltyLockRef.current) return;
-
-            exitPenaltyLockRef.current = true;
-            const penalizedScore = Math.floor(score / 2);
-
-            const handleConfirm = (confirmed) => {
-              if (confirmed) {
-                setScore(penalizedScore);
-                setPhase("menu");
-
-                saveGameProgress({
-                  levelIndex,
-                  gamesAtLevel,
-                  score: penalizedScore,
-                  summary: lastSummary,
-                });
-                setHasSave(true);
-              } else {
-                exitPenaltyLockRef.current = false;
-              }
-            };
-
-            if (Platform.OS === "web") {
-              const confirmed = window.confirm(
-                `Leave round?\n\nLeaving this round now will halve your score (${score} → ${penalizedScore}). Continue?`,
-              );
-              handleConfirm(confirmed);
-            } else {
-              Alert.alert(
-                "Leave round?",
-                `Leaving this round now will halve your score (${score} → ${penalizedScore}). Continue?`,
-                [
-                  {
-                    text: "Continue",
-                    onPress: () => handleConfirm(false),
-                    style: "cancel",
-                  },
-                  {
-                    text: "Leave round",
-                    onPress: () => handleConfirm(true),
-                    style: "destructive",
-                  },
-                ],
-              );
+            if (phase === "result") {
+              setShowResultOverlay(true);
+              return;
             }
+            setMarkMode((prev) => !prev);
           }}
+        >
+          <Text style={menuStyles.secondaryButtonText}>
+            {phase === "result"
+              ? "Back to summary"
+              : markMode
+                ? "Mode: Mark"
+                : "Mode: Accuse"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={menuStyles.secondaryButton}
+          onPress={handleBackToMenuPress}
         >
           <Text style={menuStyles.secondaryButtonText}>Back to menu</Text>
         </TouchableOpacity>
@@ -564,21 +610,7 @@ export default function GameMode({ onExit }) {
     const isLoss = !isWin;
 
     if (!showResultOverlay) {
-      return (
-        <View style={styles.revealCatchAll} pointerEvents="none">
-          <Pressable
-            style={styles.revealHintPressable}
-            onPress={() => setShowResultOverlay(true)}
-            pointerEvents="auto"
-          >
-            <View style={styles.revealHintChip}>
-              <Text style={styles.revealHintText}>
-                Click here to show summary
-              </Text>
-            </View>
-          </Pressable>
-        </View>
-      );
+      return null;
     }
 
     return (
@@ -765,21 +797,8 @@ const styles = StyleSheet.create({
 
   // ── Toggle Mark Button ─────────────────────────────────────
   toggleMarkButton: {
-    position: "absolute",
-    top: 48,
-    right: 18,
-    zIndex: 100,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: appTheme.colors.action,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: appTheme.colors.borderStrong,
-  },
-  toggleMarkButtonText: {
-    color: "#090909",
-    fontSize: 14,
-    fontWeight: "700",
+    width: "100%",
+    marginBottom: 10,
   },
 
   // ── Mark Badge ─────────────────────────────────────────────

@@ -187,10 +187,10 @@ export const ROLES = {
     active: true,
     generate(speaker, allChars) {
       const rowChars = allChars.filter(
-        (c) => c.id !== speaker.id && c.position.row === speaker.position.row,
+        (c) => c.position.row === speaker.position.row,
       );
       const columnChars = allChars.filter(
-        (c) => c.id !== speaker.id && c.position.col === speaker.position.col,
+        (c) => c.position.col === speaker.position.col,
       );
 
       const rowThreats = rowChars.filter((c) => isWerewolfLike(c)).length;
@@ -271,7 +271,7 @@ export const ROLES = {
           return "I sense conflicting threads around me.";
         }
 
-        const names = chosen.map((c) => c.profession).join(", ");
+        const names = `${chosen[0].profession}, ${chosen[1].profession} or ${chosen[2].profession}`;
         return `Either ${names} is a werewolf.`;
       }
 
@@ -293,7 +293,7 @@ export const ROLES = {
         return "I see only innocents in my visions.";
       }
 
-      const names = chosen.map((c) => c.profession).join(", ");
+      const names = `${chosen[0].profession}, ${chosen[1].profession} or ${chosen[2].profession}`;
       return `Either ${names} is a werewolf.`;
     },
   },
