@@ -42,7 +42,11 @@ const DEV_STATE_LABEL = {
 // ─────────────────────────────────────────────────────────────
 //  COMPONENT
 // ─────────────────────────────────────────────────────────────
-export default function GameMode({ onExit, showAccuseAlerts = true }) {
+export default function GameMode({
+  onExit,
+  showAccuseAlerts = true,
+  devModeEnabled = false,
+}) {
   const { width } = useWindowDimensions();
   const isMobile = Platform.OS !== "web";
   const [phase, setPhase] = useState("menu");
@@ -341,7 +345,9 @@ export default function GameMode({ onExit, showAccuseAlerts = true }) {
 
       <View style={styles.headerBox}>
         <Text style={styles.headerTitle}>Werewolf Solo</Text>
-        {DEV_MODE && <Text style={styles.devModeHeader}>⚙ DEVELOPER MODE</Text>}
+        {devModeEnabled && (
+          <Text style={styles.devModeHeader}>⚙ DEVELOPER MODE</Text>
+        )}
         <Text style={styles.headerStats}>
           Found: {game.foundThreats}/{game.totalThreats} | Mistakes:{" "}
           {game.mistakes}/{game.config.maxMistakes}
@@ -406,10 +412,10 @@ export default function GameMode({ onExit, showAccuseAlerts = true }) {
                   character.accused && {
                     borderColor: "#FFFFFF",
                   },
-                  DEV_MODE && character.state === "werewolf"
+                  devModeEnabled && character.state === "werewolf"
                     ? styles.cardDevWerewolf
                     : null,
-                  DEV_MODE && character.state === "villager_corrupted"
+                  devModeEnabled && character.state === "villager_corrupted"
                     ? styles.cardDevCorrupted
                     : null,
                 ]}
@@ -427,8 +433,13 @@ export default function GameMode({ onExit, showAccuseAlerts = true }) {
                 }
                 delayLongPress={180}
               >
-                {DEV_MODE && (
-                  <View style={styles.devBadgeRow}>
+                {devModeEnabled && (
+                  <View
+                    style={[
+                      styles.devBadgeRow,
+                      isMobile && styles.devBadgeRowMobile,
+                    ]}
+                  >
                     <Text style={styles.devBadgeRole}>{character.role}</Text>
                     <Text style={[styles.devBadgeState, devStateStyle]}>
                       {DEV_STATE_LABEL[character.state] ?? character.state}
@@ -482,6 +493,8 @@ export default function GameMode({ onExit, showAccuseAlerts = true }) {
                           color: getRevealedStyles(character.state).stateColor,
                         },
                       ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
                     >
                       {DEV_STATE_LABEL[character.state] ?? character.state}
                     </Text>
@@ -665,7 +678,11 @@ export default function GameMode({ onExit, showAccuseAlerts = true }) {
               {"• "}
               {t.profession}
               {"  "}
-              <Text style={styles.wolfStateLabel}>
+              <Text
+                style={styles.wolfStateLabel}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 ({t.state === "villager_corrupted" ? "Corrupted" : "Werewolf"})
               </Text>
             </Text>
@@ -849,6 +866,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 4,
+  },
+  devBadgeRowMobile: {
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
   },
   devBadgeRole: {
     color: "#9DA5E5",

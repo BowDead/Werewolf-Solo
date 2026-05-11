@@ -14,6 +14,7 @@ import {
 import GameMode from "./GameMode";
 import OptionsScreen from "./OptionsScreen";
 import { mainMenuStyles, menuStyles } from "./menuStyles";
+import { loadAppSettings, saveAppSettings } from "./gameProgress";
 
 // ---------------------------------------------------------------------------
 // 🎵 BACKGROUND MUSIC
@@ -38,6 +39,7 @@ export default function App() {
   const [volume, setVolume] = useState(60);
   const [musicOn, setMusicOn] = useState(true);
   const [showAccuseAlerts, setShowAccuseAlerts] = useState(true);
+  const [devModeEnabled, setDevModeEnabled] = useState(false);
   const soundRef = useRef(null);
 
   const { height } = useWindowDimensions();
@@ -81,6 +83,31 @@ export default function App() {
   useEffect(() => {
     soundRef.current?.setVolumeAsync(volume / 100);
   }, [volume]);
+
+  // ── Load app settings on mount ─────────────────────────────────────────────
+  useEffect(() => {
+    (async () => {
+      const settings = await loadAppSettings();
+      if (settings) {
+        if (settings.showAccuseAlerts !== undefined) {
+          setShowAccuseAlerts(settings.showAccuseAlerts);
+        }
+        if (settings.devModeEnabled !== undefined) {
+          setDevModeEnabled(settings.devModeEnabled);
+        }
+      }
+    })();
+  }, []);
+
+  // ── Save app settings when they change ──────────────────────────────────────
+  useEffect(() => {
+    (async () => {
+      await saveAppSettings({
+        showAccuseAlerts,
+        devModeEnabled,
+      });
+    })();
+  }, [showAccuseAlerts, devModeEnabled]);
 
   // ── Responsive sizing ─────────────────────────────────────────────────────
   const isSmall = height < 680;
@@ -130,6 +157,7 @@ export default function App() {
       <GameMode
         onExit={() => setScreen("menu")}
         showAccuseAlerts={showAccuseAlerts}
+        devModeEnabled={devModeEnabled}
       />
     );
   }
@@ -144,6 +172,8 @@ export default function App() {
         setMusicOn={setMusicOn}
         showAccuseAlerts={showAccuseAlerts}
         setShowAccuseAlerts={setShowAccuseAlerts}
+        devModeEnabled={devModeEnabled}
+        setDevModeEnabled={setDevModeEnabled}
         hasBgMusic={hasBgMusic}
       />
     );

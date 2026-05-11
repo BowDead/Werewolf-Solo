@@ -5,12 +5,16 @@
  * Brightness is handled locally (expo-brightness optional, silent no-op if absent).
  *
  * Props:
- *   onExit       () => void        back button handler
- *   volume       number            0-100  (from App.js)
- *   setVolume    (n) => void
- *   musicOn      boolean           (from App.js)
- *   setMusicOn   (b) => void
- *   hasBgMusic   boolean           true only when BG_MUSIC is set in App.js
+ *   onExit           () => void        back button handler
+ *   volume           number            0-100  (from App.js)
+ *   setVolume        (n) => void
+ *   musicOn          boolean           (from App.js)
+ *   setMusicOn       (b) => void
+ *   showAccuseAlerts boolean           (from App.js)
+ *   setShowAccuseAlerts (b) => void
+ *   devModeEnabled   boolean           (from App.js)
+ *   setDevModeEnabled (b) => void
+ *   hasBgMusic       boolean           true only when BG_MUSIC is set in App.js
  */
 
 import React, { useCallback, useMemo, useRef, useState } from "react";
@@ -172,6 +176,8 @@ export default function OptionsScreen({
   setMusicOn,
   showAccuseAlerts = true,
   setShowAccuseAlerts,
+  devModeEnabled = false,
+  setDevModeEnabled,
   hasBgMusic = false,
 }) {
   const { width, height } = useWindowDimensions();
@@ -263,6 +269,15 @@ export default function OptionsScreen({
               label="Accusation Popups"
               enabled={showAccuseAlerts}
               onToggle={() => setShowAccuseAlerts?.((v) => !v)}
+            />
+          </View>
+
+          <View style={styles.divider} />
+          <View style={{ marginTop: sectionGap }}>
+            <ToggleRow
+              label="Developer Mode"
+              enabled={devModeEnabled}
+              onToggle={() => setDevModeEnabled?.((v) => !v)}
             />
           </View>
         </View>

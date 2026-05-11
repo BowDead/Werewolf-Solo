@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export const GAME_PROGRESS_KEY = "WEREWOLF_SAVE";
+export const APP_SETTINGS_KEY = "WEREWOLF_SETTINGS";
 
 const DIFFICULTY_POINTS = {
   easy: 120,
@@ -118,6 +119,25 @@ export async function clearGameProgress() {
   try {
     await AsyncStorage.removeItem(GAME_PROGRESS_KEY);
   } catch {}
+}
+
+export async function loadAppSettings() {
+  try {
+    const raw = await AsyncStorage.getItem(APP_SETTINGS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export async function saveAppSettings(settings) {
+  try {
+    await AsyncStorage.setItem(APP_SETTINGS_KEY, JSON.stringify(settings));
+    return settings;
+  } catch {
+    return null;
+  }
 }
 
 export async function resetSavedScore() {
