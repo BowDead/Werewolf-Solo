@@ -1,0 +1,442 @@
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+function confirm(title, message, onConfirm, confirmLabel = "Confirm") {
+  if (Platform.OS === "web") {
+    if (window.confirm(`${title}\n\n${message}`)) onConfirm();
+    return;
+  }
+  Alert.alert(title, message, [
+    { text: "Cancel", style: "cancel" },
+    { text: confirmLabel, onPress: onConfirm },
+  ]);
+}
+import { appTheme, sharedStyleObjects } from "./appStyles";
+
+const API_URL = "http://localhost:3000";
+
+// ─── HEADER ───────────────────────────────────────────────────
+
+function Header({ title, onBack }) {
+  return (
+    <View style={styles.header}>
+      <TouchableOpacity
+        style={styles.headerSide}
+        onPress={onBack}
+        activeOpacity={0.85}
+      >
+        <Text style={styles.backArrow}>◀</Text>
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>{title}</Text>
+      <View style={styles.headerSide} />
+    </View>
+  );
+}
+
+// ─── ACCOUNT VIEW ─────────────────────────────────────────────
+
+function AccountView({ onExit, user, onLogout, onDelete, onLogin, onRegister }) {
+  const confirmLogout = () => {
+    confirm("Log out", "Are you sure you want to log out?", onLogout, "Log out");
+  };
+
+  const confirmDelete = () => {
+    confirm(
+      "Delete account",
+      "This will permanently delete your account. This cannot be undone.",
+      async () => {
+        try {
+          const res = await fetch(`${API_URL}/users/${user.userid}`, {
+            method: "DELETE",
+          });
+          if (res.ok || res.status === 204) {
+            onDelete();
+          } else {
+            Alert.alert("Error", "Could not delete account.");
+          }
+        } catch {
+          Alert.alert("Error", "Could not connect to server.");
+        }
+      },
+      "Delete",
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" />
+      <View style={styles.outer}>
+        <Header title="Account" onBack={onExit} />
+
+        <View style={styles.buttonsBlock}>
+          {user ? (
+            <>
+              <View style={styles.nicknameBox}>
+                <Text style={styles.nicknameText}>#{user.nickname}</Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.button, { marginTop: 14 }]}
+                onPress={confirmLogout}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.buttonText}>Log out</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, styles.dangerButton, { marginTop: 14 }]}
+                onPress={confirmDelete}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.buttonText}>Delete account</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={onRegister}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.buttonText}>Sign up</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, { marginTop: 14 }]}
+                onPress={onLogin}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.buttonText}>Log in</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ─── LOGIN VIEW ───────────────────────────────────────────────
+
+function LoginView({ onBack, onSuccess }) {
+  const [nickname, setNickname] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!nickname.trim() || !password.trim()) {
+      Alert.alert("Error", "Fill in all fields.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname: nickname.trim(), password }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onSuccess(data);
+      } else {
+        Alert.alert("Error", data.error || "Login failed.");
+      }
+    } catch {
+      Alert.alert("Error", "Could not connect to server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" />
+      <View style={styles.outer}>
+        <Header title="Log in" onBack={onBack} />
+
+        <View style={styles.card}>
+          <TextInput
+            style={styles.input}
+            placeholder="Nickname"
+            placeholderTextColor={appTheme.colors.textHint}
+            value={nickname}
+            onChangeText={setNickname}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor={appTheme.colors.textHint}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          <TouchableOpacity
+            style={[styles.button, { marginTop: 4 }]}
+            onPress={handleLogin}
+            activeOpacity={0.9}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#000" />
+            ) : (
+              <Text style={styles.buttonText}>Log in</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ─── REGISTER VIEW ────────────────────────────────────────────
+
+function RegisterView({ onBack, onSuccess }) {
+  const [nickname, setNickname] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleRegister = async () => {
+    if (!nickname.trim() || !password.trim() || !confirmPassword.trim()) {
+      Alert.alert("Error", "Fill in all fields.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match.");
+      return;
+    }
+    setLoading(true);
+    console.log("[Register] sending request", { nickname: nickname.trim() });
+    try {
+      const res = await fetch(`${API_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname: nickname.trim(), password }),
+      });
+      console.log("[Register] status", res.status);
+      const data = await res.json();
+      console.log("[Register] response body", data);
+      if (res.ok) {
+        console.log("[Register] success", data);
+        onSuccess(data);
+      } else {
+        console.warn("[Register] server error", data);
+        Alert.alert("Error", data.error || "Registration failed.");
+      }
+    } catch (err) {
+      console.error("[Register] fetch failed", err);
+      Alert.alert("Error", "Could not connect to server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" />
+      <View style={styles.outer}>
+        <Header title="Sign up" onBack={onBack} />
+
+        <View style={styles.card}>
+          <TextInput
+            style={styles.input}
+            placeholder="Nickname"
+            placeholderTextColor={appTheme.colors.textHint}
+            value={nickname}
+            onChangeText={setNickname}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor={appTheme.colors.textHint}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          <TextInput
+            style={[
+              styles.input,
+              confirmPassword.length > 0 && password !== confirmPassword && styles.inputError,
+            ]}
+            placeholder="Confirm password"
+            placeholderTextColor={appTheme.colors.textHint}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+          />
+          <TouchableOpacity
+            style={[styles.button, { marginTop: 4 }]}
+            onPress={handleRegister}
+            activeOpacity={0.9}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#000" />
+            ) : (
+              <Text style={styles.buttonText}>Sign up</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ─── ROOT ─────────────────────────────────────────────────────
+
+export default function AccountScreen({ onExit, user, setUser }) {
+  const [view, setView] = useState("account");
+
+  const handleLogout = () => {
+    setUser(null);
+    setView("account");
+  };
+
+  const handleDelete = () => {
+    setUser(null);
+    setView("account");
+  };
+
+  if (view === "login") {
+    return (
+      <LoginView
+        onBack={() => setView("account")}
+        onSuccess={(userData) => {
+          setUser(userData);
+          setView("account");
+        }}
+      />
+    );
+  }
+
+  if (view === "register") {
+    return (
+      <RegisterView
+        onBack={() => setView("account")}
+        onSuccess={(userData) => {
+          setUser(userData);
+          setView("account");
+        }}
+      />
+    );
+  }
+
+  return (
+    <AccountView
+      onExit={onExit}
+      user={user}
+      onLogout={handleLogout}
+      onDelete={handleDelete}
+      onLogin={() => setView("login")}
+      onRegister={() => setView("register")}
+    />
+  );
+}
+
+// ─── STYLES ───────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  safeArea: sharedStyleObjects.safeArea,
+  outer: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 24,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 64,
+    borderRadius: appTheme.radius.xxl,
+    borderWidth: appTheme.borderWidth.xl,
+    borderColor: appTheme.colors.borderStrong,
+    backgroundColor: appTheme.colors.primaryAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  headerSide: {
+    width: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backArrow: {
+    color: appTheme.colors.textButtonDark,
+    fontSize: 22,
+    fontWeight: "800",
+  },
+  headerTitle: {
+    color: appTheme.colors.textButtonDark,
+    fontSize: 22,
+    fontWeight: "700",
+    textAlign: "center",
+    flex: 1,
+  },
+  buttonsBlock: {
+    marginTop: 18,
+    width: "100%",
+  },
+  card: {
+    marginTop: 18,
+    backgroundColor: appTheme.colors.surface,
+    borderRadius: appTheme.radius.xl,
+    borderWidth: appTheme.borderWidth.xl,
+    borderColor: appTheme.colors.borderStrong,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    gap: 14,
+  },
+  input: {
+    backgroundColor: appTheme.colors.panel,
+    borderRadius: appTheme.radius.md,
+    borderWidth: appTheme.borderWidth.sm,
+    borderColor: appTheme.colors.borderStrong,
+    color: appTheme.colors.textMain,
+    fontSize: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  inputError: {
+    borderColor: "#C0392B",
+  },
+  button: {
+    ...sharedStyleObjects.primaryButton,
+    minHeight: 64,
+    borderRadius: appTheme.radius.xxl,
+  },
+  buttonText: {
+    color: appTheme.colors.textButtonDark,
+    fontSize: 24,
+    fontWeight: "500",
+    textAlign: "center",
+  },
+  dangerButton: {
+    backgroundColor: appTheme.colors.actionDisabled,
+  },
+  nicknameBox: {
+    ...sharedStyleObjects.secondaryButton,
+    minHeight: 64,
+    borderRadius: appTheme.radius.xxl,
+  },
+  nicknameText: {
+    color: appTheme.colors.textMain,
+    fontSize: 24,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+});

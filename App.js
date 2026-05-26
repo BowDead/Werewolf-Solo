@@ -11,10 +11,15 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import AccountScreen from "./AccountScreen";
 import GameMode from "./GameMode";
 import OptionsScreen from "./OptionsScreen";
+import ScoreboardScreen from "./ScoreboardScreen";
 import { mainMenuStyles, menuStyles } from "./menuStyles";
 import { loadAppSettings, saveAppSettings } from "./gameProgress";
+
+const USER_SESSION_KEY = "WEREWOLF_USER";
 
 // ---------------------------------------------------------------------------
 // 🎵 BACKGROUND MUSIC
@@ -36,7 +41,29 @@ try {
 
 export default function App() {
   const [screen, setScreen] = useState("menu");
+  const [user, setUser] = useState(null);
   const [volume, setVolume] = useState(60);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(USER_SESSION_KEY);
+        if (raw) setUser(JSON.parse(raw));
+      } catch {}
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (user) {
+          await AsyncStorage.setItem(USER_SESSION_KEY, JSON.stringify(user));
+        } else {
+          await AsyncStorage.removeItem(USER_SESSION_KEY);
+        }
+      } catch {}
+    })();
+  }, [user]);
   const [musicOn, setMusicOn] = useState(true);
   const [showAccuseAlerts, setShowAccuseAlerts] = useState(true);
   const [devModeEnabled, setDevModeEnabled] = useState(false);
@@ -117,19 +144,8 @@ export default function App() {
   const menuItems = useMemo(
     () => [
       { label: "Play", onPress: () => setScreen("game") },
-      {
-        label: "Log in",
-        onPress: () =>
-          Alert.alert("Log in", "Login will be available in a future version."),
-      },
-      {
-        label: "Ranking",
-        onPress: () =>
-          Alert.alert(
-            "Ranking",
-            "Ranking will be available in a future version.",
-          ),
-      },
+      { label: "Account", onPress: () => setScreen("account") },
+      { label: "Ranking", onPress: () => setScreen("scoreboard") },
       { label: "Options", onPress: () => setScreen("options") },
       {
         label: "Quit",
@@ -158,6 +174,25 @@ export default function App() {
         onExit={() => setScreen("menu")}
         showAccuseAlerts={showAccuseAlerts}
         devModeEnabled={devModeEnabled}
+      />
+    );
+  }
+
+  if (screen === "scoreboard") {
+    return (
+      <ScoreboardScreen
+        onExit={() => setScreen("menu")}
+        currentUser={user}
+      />
+    );
+  }
+
+  if (screen === "account") {
+    return (
+      <AccountScreen
+        onExit={() => setScreen("menu")}
+        user={user}
+        setUser={setUser}
       />
     );
   }
