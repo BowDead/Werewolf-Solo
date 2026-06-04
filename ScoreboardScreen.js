@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { appTheme, sharedStyleObjects } from "./appStyles";
 
-const API_URL = "http://localhost:3000";
+const API_URL = "http://localhost:5000";
 
 const MEDAL = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
@@ -24,7 +24,7 @@ export default function ScoreboardScreen({ onExit, currentUser }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/leaderboard?limit=20`);
+      const res = await fetch(`${API_URL}/rankings?limit=20`);
       if (!res.ok) throw new Error("Server error");
       const data = await res.json();
       setEntries(data);
@@ -51,7 +51,7 @@ export default function ScoreboardScreen({ onExit, currentUser }) {
         <Text style={[styles.nickname, isMe && styles.nicknameHighlight]} numberOfLines={1}>
           {item.nickname}
         </Text>
-        <Text style={styles.score}>{item.totalscore} pts</Text>
+        <Text style={styles.score}>{item.score} pts</Text>
       </View>
     );
   };

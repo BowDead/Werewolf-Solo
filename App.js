@@ -174,6 +174,7 @@ export default function App() {
         onExit={() => setScreen("menu")}
         showAccuseAlerts={showAccuseAlerts}
         devModeEnabled={devModeEnabled}
+        currentUser={user}
       />
     );
   }

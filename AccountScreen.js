@@ -24,7 +24,7 @@ function confirm(title, message, onConfirm, confirmLabel = "Confirm") {
 }
 import { appTheme, sharedStyleObjects } from "./appStyles";
 
-const API_URL = "http://localhost:3000";
+const API_URL = "http://localhost:5000";
 
 // ─── HEADER ───────────────────────────────────────────────────
 

@@ -42,10 +42,13 @@ const DEV_STATE_LABEL = {
 // ─────────────────────────────────────────────────────────────
 //  COMPONENT
 // ─────────────────────────────────────────────────────────────
+const API_URL = "http://localhost:5000";
+
 export default function GameMode({
   onExit,
   showAccuseAlerts = true,
   devModeEnabled = false,
+  currentUser = null,
 }) {
   const { width } = useWindowDimensions();
   const isMobile = Platform.OS !== "web";
@@ -177,6 +180,14 @@ export default function GameMode({
       score: newScore,
       summary,
     });
+
+    if (currentUser && newScore > 0) {
+      fetch(`${API_URL}/rankings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userid: currentUser.userid, score: newScore }),
+      }).catch(() => {});
+    }
 
     setGame({ ...nextGameState, result: resultType, summary });
     setPhase("result");
