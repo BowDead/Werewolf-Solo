@@ -51,11 +51,14 @@ export default function GameMode({
   devModeEnabled = false,
   currentUser = null,
 }) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isMobile = Platform.OS !== "web";
+  const isPortrait = height >= width;
   const [phase, setPhase] = useState("menu");
   const [game, setGame] = useState(null);
-  const [activeSpeakerId, setActiveSpeakerId] = useState(null);
+  const [hoveredSpeakerId, setHoveredSpeakerId] = useState(null);
+  const [lockedSpeakerId, setLockedSpeakerId] = useState(null);
+  const activeSpeakerId = lockedSpeakerId ?? hoveredSpeakerId;
   const [levelIndex, setLevelIndex] = useState(0);
   const [gamesAtLevel, setGamesAtLevel] = useState(0);
   const [score, setScore] = useState(0);
@@ -167,7 +170,9 @@ export default function GameMode({
     setGamesAtLevel(games);
     setScore(newScore);
     setGame(newGame);
-    setActiveSpeakerId(null);
+    setHoveredSpeakerId(null);
+    setLockedSpeakerId(null);
+    setMarkMode(false);
     setPhase("playing");
     setShowResultOverlay(true);
     setNewAchievements([]);
@@ -232,6 +237,7 @@ export default function GameMode({
     setGamesAtLevel(newGamesCounter);
     setScore(newScore);
     setLastSummary(summary);
+    setMarkMode(false);
     setShowResultOverlay(true);
 
     saveGameProgress(
@@ -267,18 +273,17 @@ export default function GameMode({
     setPhase("result");
   };
 
-  const toggleCharacterMark = (characterId) => {
+  const applyCharacterMark = (characterId, color) => {
     if (!game || game.result) return;
 
     const selected = game.characters.find((c) => c.id === characterId);
     if (!selected) return;
 
-    const marks = { none: 0, green: 1, yellow: 2, red: 3 };
-    const nextMarkIndex = (marks[selected.mark || "none"] + 1) % 4;
-    const markKeys = Object.keys(marks).find((k) => marks[k] === nextMarkIndex);
+    const currentMarks = selected.marks || {};
+    const updatedMarks = { ...currentMarks, [color]: !currentMarks[color] };
 
     const updatedCharacters = game.characters.map((c) =>
-      c.id === characterId ? { ...c, mark: markKeys } : c,
+      c.id === characterId ? { ...c, marks: updatedMarks } : c,
     );
 
     setGame({ ...game, characters: updatedCharacters });
@@ -454,7 +459,7 @@ export default function GameMode({
         {visibleGridItems.map((character, tileIndex) => {
           if (character.placeholder) {
             return (
-              <View
+              <Pressable
                 key={character.id}
                 style={[
                   styles.gridItem,
@@ -463,9 +468,10 @@ export default function GameMode({
                     maxWidth: width * 0.46,
                   },
                 ]}
+                onPress={() => setLockedSpeakerId(null)}
               >
                 <View style={styles.placeholderCard} />
-              </View>
+              </Pressable>
             );
           }
 
@@ -511,18 +517,29 @@ export default function GameMode({
                     ? styles.cardDevCorrupted
                     : null,
                 ]}
-                onHoverIn={() => setActiveSpeakerId(character.id)}
-                onHoverOut={() =>
-                  setActiveSpeakerId((prev) =>
-                    prev === character.id ? null : prev,
+                onPress={() =>
+                  setLockedSpeakerId((prev) =>
+                    prev === character.id ? null : character.id,
                   )
                 }
-                onLongPress={() => setActiveSpeakerId(character.id)}
-                onPressOut={() =>
-                  setActiveSpeakerId((prev) =>
-                    prev === character.id ? null : prev,
-                  )
-                }
+                onHoverIn={() => {
+                  if (lockedSpeakerId == null) setHoveredSpeakerId(character.id);
+                }}
+                onHoverOut={() => {
+                  if (lockedSpeakerId == null)
+                    setHoveredSpeakerId((prev) =>
+                      prev === character.id ? null : prev,
+                    );
+                }}
+                onLongPress={() => {
+                  if (lockedSpeakerId == null) setHoveredSpeakerId(character.id);
+                }}
+                onPressOut={() => {
+                  if (lockedSpeakerId == null)
+                    setHoveredSpeakerId((prev) =>
+                      prev === character.id ? null : prev,
+                    );
+                }}
                 delayLongPress={180}
               >
                 {devModeEnabled && (
@@ -539,30 +556,29 @@ export default function GameMode({
                   </View>
                 )}
 
-                {character.mark && character.mark !== "none" && (
-                  <View
-                    style={[
-                      styles.markBadge,
-                      {
-                        width: markBadgeSize,
-                        height: markBadgeSize,
-                      },
-                      character.mark === "red" && styles.markBadgeRed,
-                      character.mark === "green" && styles.markBadgeGreen,
-                      character.mark === "yellow" && styles.markBadgeYellow,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.markBadgeText,
-                        {
-                          fontSize: markBadgeFontSize,
-                          lineHeight: markBadgeFontSize + 2,
-                        },
-                      ]}
-                    >
-                      !
-                    </Text>
+                {["green", "yellow", "red"].some((c) => character.marks?.[c]) && (
+                  <View style={[
+                    styles.markBadgesContainer,
+                    isPortrait
+                      ? styles.markBadgesContainerPortrait
+                      : styles.markBadgesContainerLandscape,
+                  ]}>
+                    {["green", "yellow", "red"]
+                      .filter((c) => character.marks?.[c])
+                      .map((color) => (
+                        <View
+                          key={color}
+                          style={[
+                            styles.markBadgeItem,
+                            { width: markBadgeSize, height: markBadgeSize },
+                            color === "green" && styles.markBadgeItemGreen,
+                            color === "yellow" && styles.markBadgeItemYellow,
+                            color === "red" && styles.markBadgeItemRed,
+                          ]}
+                        >
+                          <Text style={[styles.markBadgeText, { fontSize: markBadgeFontSize, lineHeight: markBadgeFontSize + 2 }]}>!</Text>
+                        </View>
+                      ))}
                   </View>
                 )}
 
@@ -624,54 +640,65 @@ export default function GameMode({
                 </View>
 
                 {!isEndgame && (
-                  <TouchableOpacity
-                    style={[
-                      styles.accuseButton,
-                      character.accused && {
-                        backgroundColor: getRevealedStyles(character.state)
-                          .buttonBackground,
-                        borderColor: getRevealedStyles(character.state)
-                          .buttonBorder,
-                        borderWidth: 3,
-                      },
-                      character.accused &&
-                      !character.state === "werewolf" &&
-                      !character.state === "villager_corrupted"
-                        ? styles.accuseButtonDisabled
-                        : null,
-                    ]}
-                    onPress={() =>
-                      markMode
-                        ? toggleCharacterMark(character.id)
-                        : accuseCharacter(character.id)
-                    }
-                    disabled={character.accused && !markMode}
-                  >
-                    <Text
+                  markMode ? (
+                    <View style={styles.markButtonsInCard}>
+                      {["green", "yellow", "red"].map((color) => (
+                        <TouchableOpacity
+                          key={color}
+                          style={[
+                            styles.markButtonInCard,
+                            color === "green" && styles.markButtonInCardGreen,
+                            color === "yellow" && styles.markButtonInCardYellow,
+                            color === "red" && styles.markButtonInCardRed,
+                            character.marks?.[color] && styles.markButtonInCardActive,
+                          ]}
+                          onPress={() => applyCharacterMark(character.id, color)}
+                        >
+                          <Text style={styles.markButtonInCardText}>
+                            {color[0].toUpperCase() + color.slice(1)}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : (
+                    <TouchableOpacity
                       style={[
-                        styles.accuseButtonText,
+                        styles.accuseButton,
                         character.accused && {
-                          color: getRevealedStyles(character.state)
-                            .buttonTextColor,
-                          fontWeight: getRevealedStyles(character.state)
-                            .buttonTextWeight,
+                          backgroundColor: getRevealedStyles(character.state)
+                            .buttonBackground,
+                          borderColor: getRevealedStyles(character.state)
+                            .buttonBorder,
+                          borderWidth: 3,
                         },
                       ]}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      minimumFontScale={accuseLabelFontScale}
+                      onPress={() => accuseCharacter(character.id)}
+                      disabled={character.accused}
                     >
-                      {markMode
-                        ? "Mark"
-                        : character.accused
+                      <Text
+                        style={[
+                          styles.accuseButtonText,
+                          character.accused && {
+                            color: getRevealedStyles(character.state)
+                              .buttonTextColor,
+                            fontWeight: getRevealedStyles(character.state)
+                              .buttonTextWeight,
+                          },
+                        ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={accuseLabelFontScale}
+                      >
+                        {character.accused
                           ? character.state === "werewolf"
                             ? "Werewolf"
                             : character.state === "villager_corrupted"
                               ? "Corrupted"
                               : "Villager"
                           : "Accuse"}
-                    </Text>
-                  </TouchableOpacity>
+                      </Text>
+                    </TouchableOpacity>
+                  )
                 )}
               </Pressable>
             </View>
@@ -922,32 +949,68 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  // ── Mark Badge ─────────────────────────────────────────────
-  markBadge: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    width: 24,
-    height: 24,
-    borderRadius: 4,
+  // ── In-card mark buttons ────────────────────────────────────
+  markButtonsInCard: {
+    flexDirection: "row",
+    gap: 4,
+  },
+  markButtonInCard: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 8,
+  },
+  markButtonInCardActive: {
+    borderWidth: 3,
+  },
+  markButtonInCardGreen: {
+    backgroundColor: "rgba(111, 207, 151, 0.18)",
+    borderColor: "#6FCF97",
+  },
+  markButtonInCardYellow: {
+    backgroundColor: "rgba(242, 201, 76, 0.18)",
+    borderColor: "#F2C94C",
+  },
+  markButtonInCardRed: {
+    backgroundColor: "rgba(235, 87, 87, 0.18)",
+    borderColor: "#EB5757",
+  },
+  markButtonInCardText: {
+    color: appTheme.colors.textMain,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  // ── Mark Badges (multi-tag) ────────────────────────────────
+  markBadgesContainer: {
+    position: "absolute",
+    top: -2,
+    right: -2,
     zIndex: 10,
+    overflow: "hidden",
+    borderTopRightRadius: 14,
+    borderBottomLeftRadius: 10,
   },
-  markBadgeRed: {
-    backgroundColor: "#EB5757",
-    borderWidth: 1,
-    borderColor: "#8B2020",
+  markBadgesContainerPortrait: {
+    flexDirection: "column",
   },
-  markBadgeGreen: {
+  markBadgesContainerLandscape: {
+    flexDirection: "row",
+  },
+  markBadgeItem: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  markBadgeItemGreen: {
     backgroundColor: "#6FCF97",
-    borderWidth: 1,
-    borderColor: "#2F5233",
   },
-  markBadgeYellow: {
+  markBadgeItemYellow: {
     backgroundColor: "#F2C94C",
-    borderWidth: 1,
-    borderColor: "#C9B14A",
+  },
+  markBadgeItemRed: {
+    backgroundColor: "#EB5757",
   },
   markBadgeText: {
     color: "#0B0B0B",
@@ -1021,6 +1084,7 @@ const styles = StyleSheet.create({
     padding: 12,
     justifyContent: "space-between",
     cursor: "default",
+    overflow: "visible",
   },
   cardActiveSpeaker: {
     borderColor: "#FFFFFF",

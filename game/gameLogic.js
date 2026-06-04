@@ -94,6 +94,7 @@ export function createGame(levelKey) {
     state: states[index],
     accused: false,
     statement: "",
+    marks: {},
   }));
 
   const withStatements = characters.map((speaker) => {
