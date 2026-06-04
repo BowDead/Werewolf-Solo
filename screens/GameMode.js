@@ -118,12 +118,15 @@ export default function GameMode({
     setNewAchievements([]);
     exitPenaltyLockRef.current = false;
 
-    saveGameProgress({
-      levelIndex: index,
-      gamesAtLevel: games,
-      score: newScore,
-      summary: lastSummary,
-    }, devModeEnabled);
+    saveGameProgress(
+      {
+        levelIndex: index,
+        gamesAtLevel: games,
+        score: newScore,
+        summary: lastSummary,
+      },
+      devModeEnabled,
+    );
     setHasSave(true);
   };
 
@@ -176,12 +179,15 @@ export default function GameMode({
     setLastSummary(summary);
     setShowResultOverlay(true);
 
-    saveGameProgress({
-      levelIndex: newLevelIndex,
-      gamesAtLevel: newGamesCounter,
-      score: newScore,
-      summary,
-    }, devModeEnabled);
+    saveGameProgress(
+      {
+        levelIndex: newLevelIndex,
+        gamesAtLevel: newGamesCounter,
+        score: newScore,
+        summary,
+      },
+      devModeEnabled,
+    );
 
     if (currentUser && newScore > 0 && !devModeEnabled) {
       fetch(`${API_URL}/rankings`, {
@@ -326,12 +332,15 @@ export default function GameMode({
         setScore(penalizedScore);
         setPhase("menu");
 
-        saveGameProgress({
-          levelIndex,
-          gamesAtLevel,
-          score: penalizedScore,
-          summary: lastSummary,
-        }, devModeEnabled);
+        saveGameProgress(
+          {
+            levelIndex,
+            gamesAtLevel,
+            score: penalizedScore,
+            summary: lastSummary,
+          },
+          devModeEnabled,
+        );
         setHasSave(true);
       } else {
         exitPenaltyLockRef.current = false;
@@ -698,7 +707,9 @@ export default function GameMode({
           )}
           {newAchievements.length > 0 && (
             <View style={styles.achievementsBox}>
-              <Text style={styles.achievementsTitle}>Achievement unlocked!</Text>
+              <Text style={styles.achievementsTitle}>
+                Achievement unlocked!
+              </Text>
               {newAchievements.map((a) => (
                 <Text key={a.statname} style={styles.achievementItem}>
                   * {a.label}
