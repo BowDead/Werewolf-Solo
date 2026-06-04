@@ -30,7 +30,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { appTheme, sharedStyleObjects } from "./appStyles";
+import { appTheme, sharedStyleObjects } from "../styles/appStyles";
 
 // ---------------------------------------------------------------------------
 // SliderRow

@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Platform,
   SafeAreaView,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -22,9 +23,15 @@ function confirm(title, message, onConfirm, confirmLabel = "Confirm") {
     { text: confirmLabel, onPress: onConfirm },
   ]);
 }
-import { appTheme, sharedStyleObjects } from "./appStyles";
+import { appTheme, sharedStyleObjects } from "../styles/appStyles";
 
 const API_URL = "http://localhost:5000";
+
+const SCORE_ACHIEVEMENTS = [
+  { statname: "achievement_500",  label: "500 Points" },
+  { statname: "achievement_1000", label: "1000 Points" },
+  { statname: "achievement_3000", label: "3000 Points" },
+];
 
 // ─── HEADER ───────────────────────────────────────────────────
 
@@ -47,6 +54,23 @@ function Header({ title, onBack }) {
 // ─── ACCOUNT VIEW ─────────────────────────────────────────────
 
 function AccountView({ onExit, user, onLogout, onDelete, onLogin, onRegister }) {
+  const [earnedStatnames, setEarnedStatnames] = useState(null);
+
+  useEffect(() => {
+    if (!user) return;
+    fetch(`${API_URL}/userstats/${user.userid}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const earned = new Set(
+          data
+            .filter((s) => Number(s.value) === 1 && s.statname?.startsWith("achievement_"))
+            .map((s) => s.statname)
+        );
+        setEarnedStatnames(earned);
+      })
+      .catch(() => setEarnedStatnames(new Set()));
+  }, [user]);
+
   const confirmLogout = () => {
     confirm("Log out", "Are you sure you want to log out?", onLogout, "Log out");
   };
@@ -76,53 +100,79 @@ function AccountView({ onExit, user, onLogout, onDelete, onLogin, onRegister }) 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" />
-      <View style={styles.outer}>
+      <ScrollView
+        style={styles.outer}
+        contentContainerStyle={styles.outerContent}
+        keyboardShouldPersistTaps="handled"
+      >
         <Header title="Account" onBack={onExit} />
 
-        <View style={styles.buttonsBlock}>
-          {user ? (
-            <>
-              <View style={styles.nicknameBox}>
-                <Text style={styles.nicknameText}>#{user.nickname}</Text>
-              </View>
+        {user ? (
+          <>
+            <View style={[styles.nicknameBox, { marginTop: 18 }]}>
+              <Text style={styles.nicknameText}>#{user.nickname}</Text>
+            </View>
 
-              <TouchableOpacity
-                style={[styles.button, { marginTop: 14 }]}
-                onPress={confirmLogout}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.buttonText}>Log out</Text>
-              </TouchableOpacity>
+            <View style={styles.achievementsSection}>
+              <Text style={styles.achievementsSectionTitle}>Achievements</Text>
+              {SCORE_ACHIEVEMENTS.map((ach) => {
+                const earned = earnedStatnames?.has(ach.statname) ?? false;
+                return (
+                  <View
+                    key={ach.statname}
+                    style={[
+                      styles.achievementRow,
+                      earned ? styles.achievementRowEarned : styles.achievementRowLocked,
+                    ]}
+                  >
+                    <Text style={[styles.achievementIcon, earned ? styles.achievementIconEarned : styles.achievementIconLocked]}>
+                      {earned ? "★" : "☆"}
+                    </Text>
+                    <Text style={[styles.achievementLabel, earned ? styles.achievementLabelEarned : styles.achievementLabelLocked]}>
+                      {ach.label}
+                    </Text>
+                    {earned && <Text style={styles.achievementDone}>Unlocked</Text>}
+                  </View>
+                );
+              })}
+            </View>
 
-              <TouchableOpacity
-                style={[styles.button, styles.dangerButton, { marginTop: 14 }]}
-                onPress={confirmDelete}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.buttonText}>Delete account</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <TouchableOpacity
-                style={styles.button}
-                onPress={onRegister}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.buttonText}>Sign up</Text>
-              </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={confirmLogout}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.buttonText}>Log out</Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.button, { marginTop: 14 }]}
-                onPress={onLogin}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.buttonText}>Log in</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      </View>
+            <TouchableOpacity
+              style={[styles.button, styles.dangerButton, { marginTop: 14 }]}
+              onPress={confirmDelete}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.buttonText}>Delete account</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={styles.buttonsBlock}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={onRegister}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.buttonText}>Sign up</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, { marginTop: 14 }]}
+              onPress={onLogin}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.buttonText}>Log in</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -355,6 +405,8 @@ const styles = StyleSheet.create({
   outer: {
     flex: 1,
     paddingHorizontal: 24,
+  },
+  outerContent: {
     paddingTop: 12,
     paddingBottom: 24,
   },
@@ -390,6 +442,67 @@ const styles = StyleSheet.create({
   buttonsBlock: {
     marginTop: 18,
     width: "100%",
+  },
+  achievementsSection: {
+    marginTop: 20,
+    marginBottom: 20,
+    width: "100%",
+    gap: 10,
+  },
+  achievementsSectionTitle: {
+    color: appTheme.colors.textSub,
+    fontSize: 13,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    marginBottom: 4,
+    paddingHorizontal: 4,
+  },
+  achievementRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: appTheme.radius.lg,
+    borderWidth: 2,
+    gap: 12,
+  },
+  achievementRowEarned: {
+    backgroundColor: "rgba(74, 59, 16, 0.55)",
+    borderColor: "#C9B14A",
+  },
+  achievementRowLocked: {
+    backgroundColor: appTheme.colors.panel,
+    borderColor: appTheme.colors.borderMuted,
+    opacity: 0.45,
+  },
+  achievementIcon: {
+    fontSize: 22,
+    lineHeight: 26,
+  },
+  achievementIconEarned: {
+    color: "#F2C94C",
+  },
+  achievementIconLocked: {
+    color: appTheme.colors.textHint,
+  },
+  achievementLabel: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: "700",
+  },
+  achievementLabelEarned: {
+    color: "#F2C94C",
+  },
+  achievementLabelLocked: {
+    color: appTheme.colors.textHint,
+  },
+  achievementDone: {
+    color: "#C9B14A",
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   card: {
     marginTop: 18,

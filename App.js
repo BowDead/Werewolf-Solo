@@ -12,12 +12,12 @@ import {
   View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import AccountScreen from "./AccountScreen";
-import GameMode from "./GameMode";
-import OptionsScreen from "./OptionsScreen";
-import ScoreboardScreen from "./ScoreboardScreen";
-import { mainMenuStyles, menuStyles } from "./menuStyles";
-import { loadAppSettings, saveAppSettings } from "./gameProgress";
+import AccountScreen from "./screens/AccountScreen";
+import GameMode from "./screens/GameMode";
+import OptionsScreen from "./screens/OptionsScreen";
+import ScoreboardScreen from "./screens/ScoreboardScreen";
+import { mainMenuStyles, menuStyles } from "./styles/menuStyles";
+import { loadAppSettings, saveAppSettings } from "./game/gameProgress";
 
 const USER_SESSION_KEY = "WEREWOLF_USER";
 

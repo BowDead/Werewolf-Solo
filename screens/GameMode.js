@@ -13,17 +13,17 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { DIFFICULTY_ORDER } from "./constants";
-import { createGame } from "./gameLogic";
-import { appTheme, sharedStyleObjects } from "./appStyles";
-import { menuStyles } from "./menuStyles";
-import revealedCardStyles from "./revealedCardStyles";
+import { DIFFICULTY_ORDER } from "../game/constants";
+import { createGame } from "../game/gameLogic";
+import { appTheme, sharedStyleObjects } from "../styles/appStyles";
+import { menuStyles } from "../styles/menuStyles";
+import revealedCardStyles from "../styles/revealedCardStyles";
 import {
   buildRoundSummary,
   finalizeScoreForRound,
   loadGameProgress,
   saveGameProgress,
-} from "./gameProgress";
+} from "../game/gameProgress";
 
 // ─────────────────────────────────────────────────────────────
 //  DEVELOPER MODE
@@ -62,6 +62,7 @@ export default function GameMode({
   const [lastSummary, setLastSummary] = useState(null);
   const [showResultOverlay, setShowResultOverlay] = useState(true);
   const [markMode, setMarkMode] = useState(false);
+  const [newAchievements, setNewAchievements] = useState([]);
   const exitPenaltyLockRef = useRef(false);
 
   useEffect(() => {
@@ -78,7 +79,7 @@ export default function GameMode({
 
   const loadProgress = async () => {
     try {
-      return await loadGameProgress();
+      return await loadGameProgress(devModeEnabled);
     } catch {
       return null;
     }
@@ -114,6 +115,7 @@ export default function GameMode({
     setActiveSpeakerId(null);
     setPhase("playing");
     setShowResultOverlay(true);
+    setNewAchievements([]);
     exitPenaltyLockRef.current = false;
 
     saveGameProgress({
@@ -121,7 +123,7 @@ export default function GameMode({
       gamesAtLevel: games,
       score: newScore,
       summary: lastSummary,
-    });
+    }, devModeEnabled);
     setHasSave(true);
   };
 
@@ -179,14 +181,25 @@ export default function GameMode({
       gamesAtLevel: newGamesCounter,
       score: newScore,
       summary,
-    });
+    }, devModeEnabled);
 
-    if (currentUser && newScore > 0) {
+    if (currentUser && newScore > 0 && !devModeEnabled) {
       fetch(`${API_URL}/rankings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userid: currentUser.userid, score: newScore }),
       }).catch(() => {});
+
+      fetch(`${API_URL}/achievements/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userid: currentUser.userid, score: newScore }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.unlocked?.length > 0) setNewAchievements(data.unlocked);
+        })
+        .catch(() => {});
     }
 
     setGame({ ...nextGameState, result: resultType, summary });
@@ -318,7 +331,7 @@ export default function GameMode({
           gamesAtLevel,
           score: penalizedScore,
           summary: lastSummary,
-        });
+        }, devModeEnabled);
         setHasSave(true);
       } else {
         exitPenaltyLockRef.current = false;
@@ -682,6 +695,16 @@ export default function GameMode({
             <Text style={styles.lossPenaltyText}>
               Loss penalty: -{summary.penalty}
             </Text>
+          )}
+          {newAchievements.length > 0 && (
+            <View style={styles.achievementsBox}>
+              <Text style={styles.achievementsTitle}>Achievement unlocked!</Text>
+              {newAchievements.map((a) => (
+                <Text key={a.statname} style={styles.achievementItem}>
+                  * {a.label}
+                </Text>
+              ))}
+            </View>
           )}
           <Text style={styles.resultOverlayText}>Hidden enemies:</Text>
           {threats.map((t) => (
@@ -1164,5 +1187,29 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     backgroundColor: appTheme.colors.cardPlaceholderBackground,
     opacity: 0.45,
+  },
+  achievementsBox: {
+    width: "100%",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#C9B14A",
+    backgroundColor: "rgba(74, 59, 16, 0.6)",
+  },
+  achievementsTitle: {
+    color: "#F2C94C",
+    fontSize: 14,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  achievementItem: {
+    color: "#F2C94C",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

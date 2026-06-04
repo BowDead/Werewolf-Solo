@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export const GAME_PROGRESS_KEY = "WEREWOLF_SAVE";
+export const GAME_PROGRESS_KEY_DEV = "WEREWOLF_SAVE_DEV";
 export const APP_SETTINGS_KEY = "WEREWOLF_SETTINGS";
 
 const DIFFICULTY_POINTS = {
@@ -96,9 +97,10 @@ export function buildRoundSummary({
   };
 }
 
-export async function loadGameProgress() {
+export async function loadGameProgress(devMode = false) {
+  const key = devMode ? GAME_PROGRESS_KEY_DEV : GAME_PROGRESS_KEY;
   try {
-    const raw = await AsyncStorage.getItem(GAME_PROGRESS_KEY);
+    const raw = await AsyncStorage.getItem(key);
     if (!raw) return null;
     return JSON.parse(raw);
   } catch {
@@ -106,18 +108,20 @@ export async function loadGameProgress() {
   }
 }
 
-export async function saveGameProgress(progress) {
+export async function saveGameProgress(progress, devMode = false) {
+  const key = devMode ? GAME_PROGRESS_KEY_DEV : GAME_PROGRESS_KEY;
   try {
-    await AsyncStorage.setItem(GAME_PROGRESS_KEY, JSON.stringify(progress));
+    await AsyncStorage.setItem(key, JSON.stringify(progress));
     return progress;
   } catch {
     return null;
   }
 }
 
-export async function clearGameProgress() {
+export async function clearGameProgress(devMode = false) {
+  const key = devMode ? GAME_PROGRESS_KEY_DEV : GAME_PROGRESS_KEY;
   try {
-    await AsyncStorage.removeItem(GAME_PROGRESS_KEY);
+    await AsyncStorage.removeItem(key);
   } catch {}
 }
 
@@ -140,8 +144,8 @@ export async function saveAppSettings(settings) {
   }
 }
 
-export async function resetSavedScore() {
-  const currentProgress = await loadGameProgress();
+export async function resetSavedScore(devMode = false) {
+  const currentProgress = await loadGameProgress(devMode);
   if (!currentProgress) return null;
 
   const nextProgress = {
@@ -150,6 +154,6 @@ export async function resetSavedScore() {
     summary: null,
   };
 
-  await saveGameProgress(nextProgress);
+  await saveGameProgress(nextProgress, devMode);
   return nextProgress;
 }

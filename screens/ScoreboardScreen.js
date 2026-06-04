@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { appTheme, sharedStyleObjects } from "./appStyles";
+import { appTheme, sharedStyleObjects } from "../styles/appStyles";
 
 const API_URL = "http://localhost:5000";
 
