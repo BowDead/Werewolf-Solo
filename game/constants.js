@@ -71,4 +71,7 @@ export const PROFESSIONS = [
   "Barman",
   "Carpenter",
   "Miner",
+  "Tailor",
+  "Herbalist",
+  "Shepherd",
 ];

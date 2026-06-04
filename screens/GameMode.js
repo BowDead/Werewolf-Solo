@@ -24,6 +24,7 @@ import {
   loadGameProgress,
   saveGameProgress,
 } from "../game/gameProgress";
+import { getGridNeighbours } from "../game/utils";
 
 // ─────────────────────────────────────────────────────────────
 //  DEVELOPER MODE
@@ -94,7 +95,8 @@ export default function GameMode({
   // Pad grid to minimum 9 slots with placeholders
   const visibleGridItems = useMemo(() => {
     if (!game) return [];
-    const totalSlots = Math.max(9, game.characters.length);
+    const cols = game.config.gridCols;
+    const totalSlots = Math.ceil(game.characters.length / cols) * cols;
     const placeholders = Array.from(
       { length: totalSlots - game.characters.length },
       (_, index) => ({ id: `placeholder-${index}`, placeholder: true }),
@@ -103,6 +105,59 @@ export default function GameMode({
   }, [game]);
 
   // ── Actions ───────────────────────────────────────────────
+
+  const getMentionedProfessions = (statement, allCharacters) => {
+    if (!statement) return new Set();
+    const mentioned = new Set();
+    allCharacters.forEach((char) => {
+      if (
+        char.profession &&
+        statement.toLowerCase().includes(char.profession.toLowerCase())
+      ) {
+        mentioned.add(char.id);
+      }
+    });
+    return mentioned;
+  };
+
+  const getMentionedCharactersByLine = (speaker, allCharacters) => {
+    if (speaker.role !== "watchman") return new Set();
+    const statement = speaker.statement.toLowerCase();
+    const mentioned = new Set();
+
+    if (statement.includes("row")) {
+      allCharacters.forEach((char) => {
+        if (char.position.row === speaker.position.row) {
+          mentioned.add(char.id);
+        }
+      });
+    } else if (statement.includes("column")) {
+      allCharacters.forEach((char) => {
+        if (char.position.col === speaker.position.col) {
+          mentioned.add(char.id);
+        }
+      });
+    }
+
+    return mentioned;
+  };
+
+  const getMentionedNeighbours = (speaker, allCharacters) => {
+    if (speaker.role !== "neighbour" && speaker.role !== "doctor") return new Set();
+    const neighbours = getGridNeighbours(speaker, allCharacters);
+    return new Set(neighbours.map((n) => n.id));
+  };
+
+  const mentionedCharacterIds = useMemo(() => {
+    if (activeSpeakerId == null || !game) return new Set();
+    const speaker = game.characters.find((c) => c.id === activeSpeakerId);
+    if (!speaker) return new Set();
+    return new Set([
+      ...getMentionedProfessions(speaker.statement, game.characters),
+      ...getMentionedCharactersByLine(speaker, game.characters),
+      ...getMentionedNeighbours(speaker, game.characters),
+    ]);
+  }, [activeSpeakerId, game]);
 
   const startGameAtIndex = (index, newScore = score, games = gamesAtLevel) => {
     const levelKey = DIFFICULTY_ORDER[index];
@@ -394,6 +449,7 @@ export default function GameMode({
         style={styles.listWrap}
         contentContainerStyle={styles.gridContent}
         removeClippedSubviews={false}
+        showsVerticalScrollIndicator={false}
       >
         {visibleGridItems.map((character, tileIndex) => {
           if (character.placeholder) {
@@ -413,7 +469,8 @@ export default function GameMode({
             );
           }
 
-          const isBubbleVisible = activeSpeakerId === character.id;
+          const isActiveSpeaker = character.id === activeSpeakerId;
+          const isMentioned = mentionedCharacterIds.has(character.id);
 
           const devStateStyle =
             character.state === "werewolf"
@@ -436,6 +493,8 @@ export default function GameMode({
               <Pressable
                 style={[
                   styles.card,
+                  isActiveSpeaker && styles.cardActiveSpeaker,
+                  isMentioned && styles.cardMentioned,
                   (character.accused || isEndgame) && {
                     backgroundColor: getRevealedStyles(character.state)
                       .cardBackground,
@@ -961,6 +1020,15 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 12,
     justifyContent: "space-between",
+    cursor: "default",
+  },
+  cardActiveSpeaker: {
+    borderColor: "#FFFFFF",
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+  },
+  cardMentioned: {
+    borderColor: "#B88FFF",
+    backgroundColor: "rgba(138, 77, 200, 0.25)",
   },
   cardAccused: { opacity: 0.72, borderColor: "#9FA5E6" },
   cardRevealedWerewolf: {
