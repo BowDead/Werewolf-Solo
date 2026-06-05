@@ -17,8 +17,10 @@ function pickWeightedRole(activeRoles) {
   return shuffle(weightedPool)[0];
 }
 
-function buildRolePoolByState(states) {
-  const activeRoles = Object.keys(ROLES).filter((r) => ROLES[r].active);
+function buildRolePoolByState(states, allowedRoles) {
+  const activeRoles = Object.keys(ROLES)
+    .filter((r) => ROLES[r].active)
+    .filter((r) => !allowedRoles || allowedRoles.includes(r));
   if (activeRoles.length === 0) {
     return Array(states.length).fill("confessor");
   }
@@ -81,7 +83,7 @@ export function createGame(levelKey) {
   ];
 
   const states = shuffle(statePool);
-  const roles = buildRolePoolByState(states);
+  const roles = buildRolePoolByState(states, config.allowedRoles);
 
   const characters = selectedProfessions.map((profession, index) => ({
     id: index,

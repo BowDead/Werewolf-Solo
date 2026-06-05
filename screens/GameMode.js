@@ -146,7 +146,8 @@ export default function GameMode({
   };
 
   const getMentionedNeighbours = (speaker, allCharacters) => {
-    if (speaker.role !== "neighbour" && speaker.role !== "doctor") return new Set();
+    if (speaker.role !== "neighbour" && speaker.role !== "doctor")
+      return new Set();
     const neighbours = getGridNeighbours(speaker, allCharacters);
     return new Set(neighbours.map((n) => n.id));
   };
@@ -212,7 +213,7 @@ export default function GameMode({
       newLevelIndex = Math.min(levelIndex + 1, DIFFICULTY_ORDER.length - 1);
       newGamesCounter = 0;
     } else if (resultType === "lose") {
-      // Reset to easy on loss
+      // Reset to beginner on loss
       newLevelIndex = 0;
       newGamesCounter = 0;
     }
@@ -523,7 +524,8 @@ export default function GameMode({
                   )
                 }
                 onHoverIn={() => {
-                  if (lockedSpeakerId == null) setHoveredSpeakerId(character.id);
+                  if (lockedSpeakerId == null)
+                    setHoveredSpeakerId(character.id);
                 }}
                 onHoverOut={() => {
                   if (lockedSpeakerId == null)
@@ -532,7 +534,8 @@ export default function GameMode({
                     );
                 }}
                 onLongPress={() => {
-                  if (lockedSpeakerId == null) setHoveredSpeakerId(character.id);
+                  if (lockedSpeakerId == null)
+                    setHoveredSpeakerId(character.id);
                 }}
                 onPressOut={() => {
                   if (lockedSpeakerId == null)
@@ -556,13 +559,17 @@ export default function GameMode({
                   </View>
                 )}
 
-                {["green", "yellow", "red"].some((c) => character.marks?.[c]) && (
-                  <View style={[
-                    styles.markBadgesContainer,
-                    isPortrait
-                      ? styles.markBadgesContainerPortrait
-                      : styles.markBadgesContainerLandscape,
-                  ]}>
+                {["green", "yellow", "red"].some(
+                  (c) => character.marks?.[c],
+                ) && (
+                  <View
+                    style={[
+                      styles.markBadgesContainer,
+                      isPortrait
+                        ? styles.markBadgesContainerPortrait
+                        : styles.markBadgesContainerLandscape,
+                    ]}
+                  >
                     {["green", "yellow", "red"]
                       .filter((c) => character.marks?.[c])
                       .map((color) => (
@@ -576,7 +583,17 @@ export default function GameMode({
                             color === "red" && styles.markBadgeItemRed,
                           ]}
                         >
-                          <Text style={[styles.markBadgeText, { fontSize: markBadgeFontSize, lineHeight: markBadgeFontSize + 2 }]}>!</Text>
+                          <Text
+                            style={[
+                              styles.markBadgeText,
+                              {
+                                fontSize: markBadgeFontSize,
+                                lineHeight: markBadgeFontSize + 2,
+                              },
+                            ]}
+                          >
+                            !
+                          </Text>
                         </View>
                       ))}
                   </View>
@@ -609,27 +626,9 @@ export default function GameMode({
                   </View>
                 )}
 
-                <View
-                  pointerEvents="none"
-                  style={[
-                    styles.quoteBox,
-                    (character.accused || isEndgame) && {
-                      backgroundColor: getRevealedStyles(character.state)
-                        .quoteBoxBackground,
-                      borderColor: getRevealedStyles(character.state)
-                        .quoteBoxBorder,
-                    },
-                  ]}
-                >
+                <View pointerEvents="none" style={styles.quoteBox}>
                   <Text
-                    style={[
-                      styles.bubbleText,
-                      (character.accused || isEndgame) && {
-                        color: getRevealedStyles(character.state).textColor,
-                        fontWeight: getRevealedStyles(character.state)
-                          .textWeight,
-                      },
-                    ]}
+                    style={styles.bubbleText}
                     numberOfLines={isMobile ? 4 : 5}
                     adjustsFontSizeToFit
                     minimumFontScale={quoteFontScale}
@@ -639,9 +638,16 @@ export default function GameMode({
                   </Text>
                 </View>
 
-                {!isEndgame && (
-                  markMode ? (
-                    <View style={styles.markButtonsInCard}>
+                {!isEndgame &&
+                  (markMode ? (
+                    <View
+                      style={[
+                        styles.markButtonsInCard,
+                        isPortrait
+                          ? styles.markButtonsInCardPortrait
+                          : styles.markButtonsInCardLandscape,
+                      ]}
+                    >
                       {["green", "yellow", "red"].map((color) => (
                         <TouchableOpacity
                           key={color}
@@ -650,9 +656,12 @@ export default function GameMode({
                             color === "green" && styles.markButtonInCardGreen,
                             color === "yellow" && styles.markButtonInCardYellow,
                             color === "red" && styles.markButtonInCardRed,
-                            character.marks?.[color] && styles.markButtonInCardActive,
+                            character.marks?.[color] &&
+                              styles.markButtonInCardActive,
                           ]}
-                          onPress={() => applyCharacterMark(character.id, color)}
+                          onPress={() =>
+                            applyCharacterMark(character.id, color)
+                          }
                         >
                           <Text style={styles.markButtonInCardText}>
                             {color[0].toUpperCase() + color.slice(1)}
@@ -698,8 +707,7 @@ export default function GameMode({
                           : "Accuse"}
                       </Text>
                     </TouchableOpacity>
-                  )
-                )}
+                  ))}
               </Pressable>
             </View>
           );
@@ -951,8 +959,13 @@ const styles = StyleSheet.create({
 
   // ── In-card mark buttons ────────────────────────────────────
   markButtonsInCard: {
-    flexDirection: "row",
     gap: 4,
+  },
+  markButtonsInCardPortrait: {
+    flexDirection: "column",
+  },
+  markButtonsInCardLandscape: {
+    flexDirection: "row",
   },
   markButtonInCard: {
     flex: 1,
@@ -1142,10 +1155,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 8,
     minHeight: 42,
-    backgroundColor: appTheme.colors.surface,
+    backgroundColor: "transparent",
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: appTheme.colors.borderMuted,
+    borderColor: "transparent",
     paddingVertical: 6,
     paddingHorizontal: 8,
     justifyContent: "center",

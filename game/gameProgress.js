@@ -5,6 +5,7 @@ export const GAME_PROGRESS_KEY_DEV = "WEREWOLF_SAVE_DEV";
 export const APP_SETTINGS_KEY = "WEREWOLF_SETTINGS";
 
 const DIFFICULTY_POINTS = {
+  beginner: 80,
   easy: 120,
   normal: 160,
   hard: 220,
