@@ -13,7 +13,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { DIFFICULTY_ORDER } from "../game/constants";
+import { API_URL, DIFFICULTY_ORDER } from "../game/constants";
 import { createGame } from "../game/gameLogic";
 import { appTheme, sharedStyleObjects } from "../styles/appStyles";
 import { menuStyles } from "../styles/menuStyles";
@@ -43,7 +43,6 @@ const DEV_STATE_LABEL = {
 // ─────────────────────────────────────────────────────────────
 //  COMPONENT
 // ─────────────────────────────────────────────────────────────
-const API_URL = "http://localhost:5000";
 
 export default function GameMode({
   onExit,

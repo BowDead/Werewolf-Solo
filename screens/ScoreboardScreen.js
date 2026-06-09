@@ -10,8 +10,7 @@ import {
   View,
 } from "react-native";
 import { appTheme, sharedStyleObjects } from "../styles/appStyles";
-
-const API_URL = "http://localhost:5000";
+import { API_URL } from "../game/constants";
 
 const MEDAL = { 1: "🥇", 2: "🥈", 3: "🥉" };
 

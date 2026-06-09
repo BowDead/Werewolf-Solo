@@ -24,8 +24,7 @@ function confirm(title, message, onConfirm, confirmLabel = "Confirm") {
   ]);
 }
 import { appTheme, sharedStyleObjects } from "../styles/appStyles";
-
-const API_URL = "http://localhost:5000";
+import { API_URL } from "../game/constants";
 
 const SCORE_ACHIEVEMENTS = [
   { statname: "achievement_500",  label: "Rookie - Score 500 points" },
@@ -66,9 +65,13 @@ function Header({ title, onBack }) {
 
 function AccountView({ onExit, user, onLogout, onDelete, onLogin, onRegister }) {
   const [earnedStatnames, setEarnedStatnames] = useState(null);
+  const [achievementsLoading, setAchievementsLoading] = useState(false);
+  const [achievementsError, setAchievementsError] = useState(false);
 
   useEffect(() => {
     if (!user) return;
+    setAchievementsLoading(true);
+    setAchievementsError(false);
     fetch(`${API_URL}/userstats/${user.userid}`)
       .then((r) => r.json())
       .then((data) => {
@@ -79,7 +82,11 @@ function AccountView({ onExit, user, onLogout, onDelete, onLogin, onRegister }) 
         );
         setEarnedStatnames(earned);
       })
-      .catch(() => setEarnedStatnames(new Set()));
+      .catch(() => {
+        setAchievementsError(true);
+        setEarnedStatnames(new Set());
+      })
+      .finally(() => setAchievementsLoading(false));
   }, [user]);
 
   const confirmLogout = () => {
@@ -126,26 +133,38 @@ function AccountView({ onExit, user, onLogout, onDelete, onLogin, onRegister }) 
 
             <View style={styles.achievementsSection}>
               <Text style={styles.achievementsSectionTitle}>Achievements</Text>
-              {[...SCORE_ACHIEVEMENTS, ...WW_FOUND_ACHIEVEMENTS, ...MISC_ACHIEVEMENTS].map((ach) => {
-                const earned = earnedStatnames?.has(ach.statname) ?? false;
-                return (
-                  <View
-                    key={ach.statname}
-                    style={[
-                      styles.achievementRow,
-                      earned ? styles.achievementRowEarned : styles.achievementRowLocked,
-                    ]}
-                  >
-                    <Text style={[styles.achievementIcon, earned ? styles.achievementIconEarned : styles.achievementIconLocked]}>
-                      {earned ? "★" : "☆"}
-                    </Text>
-                    <Text style={[styles.achievementLabel, earned ? styles.achievementLabelEarned : styles.achievementLabelLocked]}>
-                      {ach.label}
-                    </Text>
-                    {earned && <Text style={styles.achievementDone}>Unlocked</Text>}
-                  </View>
-                );
-              })}
+              {achievementsLoading ? (
+                <ActivityIndicator
+                  size="small"
+                  color={appTheme.colors.primary}
+                  style={{ marginVertical: 16 }}
+                />
+              ) : achievementsError ? (
+                <Text style={styles.achievementsOfflineText}>
+                  Could not load achievements — check your connection.
+                </Text>
+              ) : (
+                [...SCORE_ACHIEVEMENTS, ...WW_FOUND_ACHIEVEMENTS, ...MISC_ACHIEVEMENTS].map((ach) => {
+                  const earned = earnedStatnames?.has(ach.statname) ?? false;
+                  return (
+                    <View
+                      key={ach.statname}
+                      style={[
+                        styles.achievementRow,
+                        earned ? styles.achievementRowEarned : styles.achievementRowLocked,
+                      ]}
+                    >
+                      <Text style={[styles.achievementIcon, earned ? styles.achievementIconEarned : styles.achievementIconLocked]}>
+                        {earned ? "★" : "☆"}
+                      </Text>
+                      <Text style={[styles.achievementLabel, earned ? styles.achievementLabelEarned : styles.achievementLabelLocked]}>
+                        {ach.label}
+                      </Text>
+                      {earned && <Text style={styles.achievementDone}>Unlocked</Text>}
+                    </View>
+                  );
+                })
+              )}
             </View>
 
             <TouchableOpacity
@@ -280,25 +299,19 @@ function RegisterView({ onBack, onSuccess }) {
       return;
     }
     setLoading(true);
-    console.log("[Register] sending request", { nickname: nickname.trim() });
     try {
       const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nickname: nickname.trim(), password }),
       });
-      console.log("[Register] status", res.status);
       const data = await res.json();
-      console.log("[Register] response body", data);
       if (res.ok) {
-        console.log("[Register] success", data);
         onSuccess(data);
       } else {
-        console.warn("[Register] server error", data);
         Alert.alert("Error", data.error || "Registration failed.");
       }
-    } catch (err) {
-      console.error("[Register] fetch failed", err);
+    } catch {
       Alert.alert("Error", "Could not connect to server.");
     } finally {
       setLoading(false);
@@ -467,6 +480,13 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1.2,
     marginBottom: 4,
+    paddingHorizontal: 4,
+  },
+  achievementsOfflineText: {
+    color: appTheme.colors.textHint,
+    fontSize: 14,
+    textAlign: "center",
+    paddingVertical: 12,
     paddingHorizontal: 4,
   },
   achievementRow: {
