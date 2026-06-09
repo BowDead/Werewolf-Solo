@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -12,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Constants from "expo-constants";
 
 function confirm(title, message, onConfirm, confirmLabel = "Confirm") {
   if (Platform.OS === "web") {
@@ -27,20 +27,29 @@ import { appTheme, sharedStyleObjects } from "../styles/appStyles";
 import { API_URL } from "../game/constants";
 
 const SCORE_ACHIEVEMENTS = [
-  { statname: "achievement_500",  label: "Rookie - Score 500 points" },
+  { statname: "achievement_500", label: "Rookie - Score 500 points" },
   { statname: "achievement_1000", label: "Veteran - Score 1000 points" },
   { statname: "achievement_3000", label: "Legend - Score 3000 points" },
 ];
 
 const WW_FOUND_ACHIEVEMENTS = [
-  { statname: "achievement_ww_1",   label: "First Blood - Find your first werewolf" },
-  { statname: "achievement_ww_10",  label: "Hunter - Find 10 werewolves" },
-  { statname: "achievement_ww_100", label: "Witch Hunter - Find 100 werewolves" },
+  {
+    statname: "achievement_ww_1",
+    label: "First Blood - Find your first werewolf",
+  },
+  { statname: "achievement_ww_10", label: "Hunter - Find 10 werewolves" },
+  {
+    statname: "achievement_ww_100",
+    label: "Witch Hunter - Find 100 werewolves",
+  },
 ];
 
 const MISC_ACHIEVEMENTS = [
-  { statname: "achievement_mayor",       label: "Ups - Accuse a mayor" },
-  { statname: "achievement_recluse_ww",  label: "I don't like you too - Accuse a recluse werewolf" },
+  { statname: "achievement_mayor", label: "Ups - Accuse a mayor" },
+  {
+    statname: "achievement_recluse_ww",
+    label: "I don't like you too - Accuse a recluse werewolf",
+  },
 ];
 
 // ─── HEADER ───────────────────────────────────────────────────
@@ -63,7 +72,14 @@ function Header({ title, onBack }) {
 
 // ─── ACCOUNT VIEW ─────────────────────────────────────────────
 
-function AccountView({ onExit, user, onLogout, onDelete, onLogin, onRegister }) {
+function AccountView({
+  onExit,
+  user,
+  onLogout,
+  onDelete,
+  onLogin,
+  onRegister,
+}) {
   const [earnedStatnames, setEarnedStatnames] = useState(null);
   const [achievementsLoading, setAchievementsLoading] = useState(false);
   const [achievementsError, setAchievementsError] = useState(false);
@@ -77,8 +93,11 @@ function AccountView({ onExit, user, onLogout, onDelete, onLogin, onRegister }) 
       .then((data) => {
         const earned = new Set(
           data
-            .filter((s) => Number(s.value) === 1 && s.statname?.startsWith("achievement_"))
-            .map((s) => s.statname)
+            .filter(
+              (s) =>
+                Number(s.value) === 1 && s.statname?.startsWith("achievement_"),
+            )
+            .map((s) => s.statname),
         );
         setEarnedStatnames(earned);
       })
@@ -90,7 +109,12 @@ function AccountView({ onExit, user, onLogout, onDelete, onLogin, onRegister }) 
   }, [user]);
 
   const confirmLogout = () => {
-    confirm("Log out", "Are you sure you want to log out?", onLogout, "Log out");
+    confirm(
+      "Log out",
+      "Are you sure you want to log out?",
+      onLogout,
+      "Log out",
+    );
   };
 
   const confirmDelete = () => {
@@ -116,94 +140,113 @@ function AccountView({ onExit, user, onLogout, onDelete, onLogin, onRegister }) 
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" />
-      <ScrollView
-        style={styles.outer}
-        contentContainerStyle={styles.outerContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Header title="Account" onBack={onExit} />
+    <ScrollView
+      style={styles.outer}
+      contentContainerStyle={styles.outerContent}
+      keyboardShouldPersistTaps="handled"
+    >
+      <Header title="Account" onBack={onExit} />
 
-        {user ? (
-          <>
-            <View style={[styles.nicknameBox, { marginTop: 18 }]}>
-              <Text style={styles.nicknameText}>#{user.nickname}</Text>
-            </View>
+      {user ? (
+        <>
+          <View style={[styles.nicknameBox, { marginTop: 18 }]}>
+            <Text style={styles.nicknameText}>#{user.nickname}</Text>
+          </View>
 
-            <View style={styles.achievementsSection}>
-              <Text style={styles.achievementsSectionTitle}>Achievements</Text>
-              {achievementsLoading ? (
-                <ActivityIndicator
-                  size="small"
-                  color={appTheme.colors.primary}
-                  style={{ marginVertical: 16 }}
-                />
-              ) : achievementsError ? (
-                <Text style={styles.achievementsOfflineText}>
-                  Could not load achievements — check your connection.
-                </Text>
-              ) : (
-                [...SCORE_ACHIEVEMENTS, ...WW_FOUND_ACHIEVEMENTS, ...MISC_ACHIEVEMENTS].map((ach) => {
-                  const earned = earnedStatnames?.has(ach.statname) ?? false;
-                  return (
-                    <View
-                      key={ach.statname}
+          <View style={styles.achievementsSection}>
+            <Text style={styles.achievementsSectionTitle}>Achievements</Text>
+            {achievementsLoading ? (
+              <ActivityIndicator
+                size="small"
+                color={appTheme.colors.primary}
+                style={{ marginVertical: 16 }}
+              />
+            ) : achievementsError ? (
+              <Text style={styles.achievementsOfflineText}>
+                Could not load achievements — check your connection.
+              </Text>
+            ) : (
+              [
+                ...SCORE_ACHIEVEMENTS,
+                ...WW_FOUND_ACHIEVEMENTS,
+                ...MISC_ACHIEVEMENTS,
+              ].map((ach) => {
+                const earned = earnedStatnames?.has(ach.statname) ?? false;
+                return (
+                  <View
+                    key={ach.statname}
+                    style={[
+                      styles.achievementRow,
+                      earned
+                        ? styles.achievementRowEarned
+                        : styles.achievementRowLocked,
+                    ]}
+                  >
+                    <Text
                       style={[
-                        styles.achievementRow,
-                        earned ? styles.achievementRowEarned : styles.achievementRowLocked,
+                        styles.achievementIcon,
+                        earned
+                          ? styles.achievementIconEarned
+                          : styles.achievementIconLocked,
                       ]}
                     >
-                      <Text style={[styles.achievementIcon, earned ? styles.achievementIconEarned : styles.achievementIconLocked]}>
-                        {earned ? "★" : "☆"}
-                      </Text>
-                      <Text style={[styles.achievementLabel, earned ? styles.achievementLabelEarned : styles.achievementLabelLocked]}>
-                        {ach.label}
-                      </Text>
-                      {earned && <Text style={styles.achievementDone}>Unlocked</Text>}
-                    </View>
-                  );
-                })
-              )}
-            </View>
-
-            <TouchableOpacity
-              style={styles.button}
-              onPress={confirmLogout}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.buttonText}>Log out</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.button, styles.dangerButton, { marginTop: 14 }]}
-              onPress={confirmDelete}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.buttonText}>Delete account</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <View style={styles.buttonsBlock}>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={onRegister}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.buttonText}>Sign up</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.button, { marginTop: 14 }]}
-              onPress={onLogin}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.buttonText}>Log in</Text>
-            </TouchableOpacity>
+                      {earned ? "★" : "☆"}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.achievementLabel,
+                        earned
+                          ? styles.achievementLabelEarned
+                          : styles.achievementLabelLocked,
+                      ]}
+                    >
+                      {ach.label}
+                    </Text>
+                    {earned && (
+                      <Text style={styles.achievementDone}>Unlocked</Text>
+                    )}
+                  </View>
+                );
+              })
+            )}
           </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={confirmLogout}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.buttonText}>Log out</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.dangerButton, { marginTop: 14 }]}
+            onPress={confirmDelete}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.buttonText}>Delete account</Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <View style={styles.buttonsBlock}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={onRegister}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.buttonText}>Sign up</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, { marginTop: 14 }]}
+            onPress={onLogin}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.buttonText}>Log in</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </ScrollView>
   );
 }
 
@@ -240,44 +283,45 @@ function LoginView({ onBack, onSuccess }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" />
-      <View style={styles.outer}>
-        <Header title="Log in" onBack={onBack} />
+    <ScrollView
+      style={styles.outer}
+      contentContainerStyle={styles.outerContent}
+      keyboardShouldPersistTaps="handled"
+    >
+      <Header title="Log in" onBack={onBack} />
 
-        <View style={styles.card}>
-          <TextInput
-            style={styles.input}
-            placeholder="Nickname"
-            placeholderTextColor={appTheme.colors.textHint}
-            value={nickname}
-            onChangeText={setNickname}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor={appTheme.colors.textHint}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          <TouchableOpacity
-            style={[styles.button, { marginTop: 4 }]}
-            onPress={handleLogin}
-            activeOpacity={0.9}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#000" />
-            ) : (
-              <Text style={styles.buttonText}>Log in</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+      <View style={styles.card}>
+        <TextInput
+          style={styles.input}
+          placeholder="Nickname"
+          placeholderTextColor={appTheme.colors.textHint}
+          value={nickname}
+          onChangeText={setNickname}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          placeholderTextColor={appTheme.colors.textHint}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+        <TouchableOpacity
+          style={[styles.button, { marginTop: 4 }]}
+          onPress={handleLogin}
+          activeOpacity={0.9}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <Text style={styles.buttonText}>Log in</Text>
+          )}
+        </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </ScrollView>
   );
 }
 
@@ -319,55 +363,58 @@ function RegisterView({ onBack, onSuccess }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" />
-      <View style={styles.outer}>
-        <Header title="Sign up" onBack={onBack} />
+    <ScrollView
+      style={styles.outer}
+      contentContainerStyle={styles.outerContent}
+      keyboardShouldPersistTaps="handled"
+    >
+      <Header title="Sign up" onBack={onBack} />
 
-        <View style={styles.card}>
-          <TextInput
-            style={styles.input}
-            placeholder="Nickname"
-            placeholderTextColor={appTheme.colors.textHint}
-            value={nickname}
-            onChangeText={setNickname}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor={appTheme.colors.textHint}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          <TextInput
-            style={[
-              styles.input,
-              confirmPassword.length > 0 && password !== confirmPassword && styles.inputError,
-            ]}
-            placeholder="Confirm password"
-            placeholderTextColor={appTheme.colors.textHint}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
-          <TouchableOpacity
-            style={[styles.button, { marginTop: 4 }]}
-            onPress={handleRegister}
-            activeOpacity={0.9}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#000" />
-            ) : (
-              <Text style={styles.buttonText}>Sign up</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+      <View style={styles.card}>
+        <TextInput
+          style={styles.input}
+          placeholder="Nickname"
+          placeholderTextColor={appTheme.colors.textHint}
+          value={nickname}
+          onChangeText={setNickname}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          placeholderTextColor={appTheme.colors.textHint}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+        <TextInput
+          style={[
+            styles.input,
+            confirmPassword.length > 0 &&
+              password !== confirmPassword &&
+              styles.inputError,
+          ]}
+          placeholder="Confirm password"
+          placeholderTextColor={appTheme.colors.textHint}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry
+        />
+        <TouchableOpacity
+          style={[styles.button, { marginTop: 4 }]}
+          onPress={handleRegister}
+          activeOpacity={0.9}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <Text style={styles.buttonText}>Sign up</Text>
+          )}
+        </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </ScrollView>
   );
 }
 
@@ -386,46 +433,48 @@ export default function AccountScreen({ onExit, user, setUser }) {
     setView("account");
   };
 
-  if (view === "login") {
-    return (
-      <LoginView
-        onBack={() => setView("account")}
-        onSuccess={(userData) => {
-          setUser(userData);
-          setView("account");
-        }}
-      />
-    );
-  }
-
-  if (view === "register") {
-    return (
-      <RegisterView
-        onBack={() => setView("account")}
-        onSuccess={(userData) => {
-          setUser(userData);
-          setView("account");
-        }}
-      />
-    );
-  }
-
   return (
-    <AccountView
-      onExit={onExit}
-      user={user}
-      onLogout={handleLogout}
-      onDelete={handleDelete}
-      onLogin={() => setView("login")}
-      onRegister={() => setView("register")}
-    />
+    <View style={styles.safeArea}>
+      <StatusBar barStyle="light-content" />
+      {view === "login" && (
+        <LoginView
+          onBack={() => setView("account")}
+          onSuccess={(userData) => {
+            setUser(userData);
+            setView("account");
+          }}
+        />
+      )}
+      {view === "register" && (
+        <RegisterView
+          onBack={() => setView("account")}
+          onSuccess={(userData) => {
+            setUser(userData);
+            setView("account");
+          }}
+        />
+      )}
+      {view === "account" && (
+        <AccountView
+          onExit={onExit}
+          user={user}
+          onLogout={handleLogout}
+          onDelete={handleDelete}
+          onLogin={() => setView("login")}
+          onRegister={() => setView("register")}
+        />
+      )}
+    </View>
   );
 }
 
 // ─── STYLES ───────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  safeArea: sharedStyleObjects.safeArea,
+  safeArea: {
+    ...sharedStyleObjects.safeArea,
+    paddingTop: Constants.statusBarHeight,
+  },
   outer: {
     flex: 1,
     paddingHorizontal: 24,
