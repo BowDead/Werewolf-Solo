@@ -83,7 +83,7 @@ export default function GameMode({
 
   const loadProgress = async () => {
     try {
-      return await loadGameProgress(devModeEnabled);
+      return await loadGameProgress(devModeEnabled, currentUser?.userid);
     } catch {
       return null;
     }
@@ -187,6 +187,7 @@ export default function GameMode({
         summary: lastSummary,
       },
       devModeEnabled,
+      currentUser?.userid,
     );
     setHasSave(true);
   };
@@ -249,25 +250,38 @@ export default function GameMode({
         summary,
       },
       devModeEnabled,
+      currentUser?.userid,
     );
 
-    if (currentUser && newScore > 0 && !devModeEnabled) {
-      fetch(`${API_URL}/rankings`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userid: currentUser.userid, score: newScore }),
-      }).catch(() => {});
+    if (currentUser && !devModeEnabled) {
+      const wwFoundIncrement = nextGameState.foundThreats ?? 0;
+      const mayorAccused = nextGameState.characters.some(
+        (c) => c.role === "president" && c.state === "villager_corrupted" && c.accused,
+      );
+      const recluseWwAccused = nextGameState.characters.some(
+        (c) => c.role === "recluse" && c.state === "werewolf" && c.accused,
+      );
 
-      fetch(`${API_URL}/achievements/check`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userid: currentUser.userid, score: newScore }),
-      })
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.unlocked?.length > 0) setNewAchievements(data.unlocked);
+      if (newScore > 0) {
+        fetch(`${API_URL}/rankings`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userid: currentUser.userid, score: newScore }),
+        }).catch(() => {});
+      }
+
+      if (newScore > 0 || wwFoundIncrement > 0 || mayorAccused || recluseWwAccused) {
+        fetch(`${API_URL}/achievements/check`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userid: currentUser.userid, score: newScore, wwFoundIncrement, mayorAccused, recluseWwAccused }),
         })
-        .catch(() => {});
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.unlocked?.length > 0) setNewAchievements(data.unlocked);
+          })
+          .catch(() => {});
+      }
     }
 
     setGame({ ...nextGameState, result: resultType, summary });
@@ -401,6 +415,7 @@ export default function GameMode({
             summary: lastSummary,
           },
           devModeEnabled,
+          currentUser?.userid,
         );
         setHasSave(true);
       } else {

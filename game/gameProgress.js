@@ -4,6 +4,11 @@ export const GAME_PROGRESS_KEY = "WEREWOLF_SAVE";
 export const GAME_PROGRESS_KEY_DEV = "WEREWOLF_SAVE_DEV";
 export const APP_SETTINGS_KEY = "WEREWOLF_SETTINGS";
 
+function getProgressKey(devMode, userId) {
+  const base = devMode ? GAME_PROGRESS_KEY_DEV : GAME_PROGRESS_KEY;
+  return userId != null ? `${base}_user_${userId}` : base;
+}
+
 const DIFFICULTY_POINTS = {
   beginner: 80,
   easy: 120,
@@ -98,8 +103,8 @@ export function buildRoundSummary({
   };
 }
 
-export async function loadGameProgress(devMode = false) {
-  const key = devMode ? GAME_PROGRESS_KEY_DEV : GAME_PROGRESS_KEY;
+export async function loadGameProgress(devMode = false, userId = null) {
+  const key = getProgressKey(devMode, userId);
   try {
     const raw = await AsyncStorage.getItem(key);
     if (!raw) return null;
@@ -109,8 +114,8 @@ export async function loadGameProgress(devMode = false) {
   }
 }
 
-export async function saveGameProgress(progress, devMode = false) {
-  const key = devMode ? GAME_PROGRESS_KEY_DEV : GAME_PROGRESS_KEY;
+export async function saveGameProgress(progress, devMode = false, userId = null) {
+  const key = getProgressKey(devMode, userId);
   try {
     await AsyncStorage.setItem(key, JSON.stringify(progress));
     return progress;
@@ -119,8 +124,8 @@ export async function saveGameProgress(progress, devMode = false) {
   }
 }
 
-export async function clearGameProgress(devMode = false) {
-  const key = devMode ? GAME_PROGRESS_KEY_DEV : GAME_PROGRESS_KEY;
+export async function clearGameProgress(devMode = false, userId = null) {
+  const key = getProgressKey(devMode, userId);
   try {
     await AsyncStorage.removeItem(key);
   } catch {}
@@ -145,8 +150,8 @@ export async function saveAppSettings(settings) {
   }
 }
 
-export async function resetSavedScore(devMode = false) {
-  const currentProgress = await loadGameProgress(devMode);
+export async function resetSavedScore(devMode = false, userId = null) {
+  const currentProgress = await loadGameProgress(devMode, userId);
   if (!currentProgress) return null;
 
   const nextProgress = {
@@ -155,6 +160,6 @@ export async function resetSavedScore(devMode = false) {
     summary: null,
   };
 
-  await saveGameProgress(nextProgress, devMode);
+  await saveGameProgress(nextProgress, devMode, userId);
   return nextProgress;
 }

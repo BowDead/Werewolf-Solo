@@ -28,9 +28,20 @@ import { appTheme, sharedStyleObjects } from "../styles/appStyles";
 const API_URL = "http://localhost:5000";
 
 const SCORE_ACHIEVEMENTS = [
-  { statname: "achievement_500",  label: "500 Points" },
-  { statname: "achievement_1000", label: "1000 Points" },
-  { statname: "achievement_3000", label: "3000 Points" },
+  { statname: "achievement_500",  label: "Rookie - Score 500 points" },
+  { statname: "achievement_1000", label: "Veteran - Score 1000 points" },
+  { statname: "achievement_3000", label: "Legend - Score 3000 points" },
+];
+
+const WW_FOUND_ACHIEVEMENTS = [
+  { statname: "achievement_ww_1",   label: "First Blood - Find your first werewolf" },
+  { statname: "achievement_ww_10",  label: "Hunter - Find 10 werewolves" },
+  { statname: "achievement_ww_100", label: "Witch Hunter - Find 100 werewolves" },
+];
+
+const MISC_ACHIEVEMENTS = [
+  { statname: "achievement_mayor",       label: "Ups - Accuse a mayor" },
+  { statname: "achievement_recluse_ww",  label: "I don't like you too - Accuse a recluse werewolf" },
 ];
 
 // ─── HEADER ───────────────────────────────────────────────────
@@ -115,7 +126,7 @@ function AccountView({ onExit, user, onLogout, onDelete, onLogin, onRegister }) 
 
             <View style={styles.achievementsSection}>
               <Text style={styles.achievementsSectionTitle}>Achievements</Text>
-              {SCORE_ACHIEVEMENTS.map((ach) => {
+              {[...SCORE_ACHIEVEMENTS, ...WW_FOUND_ACHIEVEMENTS, ...MISC_ACHIEVEMENTS].map((ach) => {
                 const earned = earnedStatnames?.has(ach.statname) ?? false;
                 return (
                   <View
